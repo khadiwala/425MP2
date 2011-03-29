@@ -13,12 +13,14 @@ int main()
     {
         Introducer * introducer = new Introducer(0,INTROPORT,5);
         (*introducer).addNewNode(10,INTROPORT+1);  //test,normally this is called from handler
+        sleep(3);
+        (*introducer).addNewNode(18,INTROPORT+2);
         sleep(100); //hack
     }    
     int lsock = new_socket();
     connect(lsock,INTROPORT);
-    s_send(lsock,"test message to introducer from listener");
-    sleep(5);
+    //s_send(lsock,"test message to introducer from listener");
+    sleep(100);
 	return 0;
 }
 

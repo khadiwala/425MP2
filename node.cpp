@@ -67,9 +67,9 @@ finger * Node::findFileLocation(int fileID)
 
 bool Node::addNode(int nodeID, int portNumber,char * buf)
 {
-    int i;
-    //make nessacary adjustments in this finger table
-    for(i = 0; i < m; i++)
+    //TODO:This needs to happen in a different function (updateTable or something)
+    /*//make nessacary adjustments in this finger table
+    for(int i = 0; i < m; i++)
     {
         if(fingerTable[i]->nodeID > nodeID && 
         nodeID >= ((this->nodeID + 1<<i) % (1<<m)))
@@ -81,40 +81,62 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
             connect(f->socket,portNumber);       
             fingerTable[i] = f;
         }
-    }
+    }*/
+    
+    //build temp finger table
+
+    if(instanceof == INTRODUCER)
+        printf("this is the wrong addnode function\n");
 
     char tmp[256];
     strcpy(tmp,buf);    
-    vector<int> newNodeFT;
+    vector<finger *> newNodeFT;
     char * pch = strtok(tmp,",");
     pch = strtok(NULL,",");  //skip 'a'
     pch = strtok(NULL,",");  //skip new node id
     pch = strtok(NULL,",");  //skip new node port#
     while(pch!=NULL){
-        newNodeFT.push_back(atoi(pch));
-        strtok(NULL,",");
+        finger* temp = new finger();
+        temp->nodeID = atoi(pch);
+        pch = strtok(NULL,",");
+        temp->socket = atoi(pch); //this is actually the port number
+        newNodeFT.push_back(temp);
+        pch = strtok(NULL,",");
     }
-    int currentIndex = newNodeFT.size() / 2;
-    int lastNode = newNodeFT[currentIndex * 2 - 1];
-    bool done = false;
-    while(!done && currentIndex < m)
+    
+    //alter temp finger table based on this->nodeID
+    int thisNodeID = this->nodeID;
+    if(this->nodeID < nodeID)
+        thisNodeID += 1<<m; 
+    for(int i = 0; i < m; i++)
     {
-        int pointsTo = ((nodeID + 1<<currentIndex) % 1<<m);
-        if(pointsTo < this->nodeID && pointsTo > lastNode){
-            strcat(buf,",");
-            strcat(buf,itoa(this->nodeID));
-            strcat(buf,",");
-            strcat(buf,itoa(this->portNumber));
+        if(thisNodeID >= nodeID + 1<<i && thisNodeID < newNodeFT[i]->nodeID)
+        {    
+            newNodeFT[i]->nodeID = thisNodeID;
+            newNodeFT[i]->socket = this->portNumber;
         }
-        else
-            done = true;
-        currentIndex++;
     }
 
+    //construct a string to send to sucuessor
+    strcpy(tmp,"a,");
+    strcat(tmp,itoa(nodeID));
+    strcat(tmp,",");
+    strcat(tmp,itoa(portNumber));
+    for(int i = 0; i < m; i++)
+    {
+        strcat(tmp,",");
+        strcat(tmp,itoa(newNodeFT[i]->nodeID));
+        strcat(tmp,",");
+        strcat(tmp,itoa(newNodeFT[i]->socket));
+    }
     if(instanceof == NODE)
-        s_send(fingerTable[0]->socket,buf);
+    {
+        s_send(fingerTable[0]->socket,tmp);
+    }
 
+    //TODO: delete vector
     newNodeFT.clear();    
+    return true;
 }
 
 bool Node::addFile(int fileID, string fileName, string ipAddress)
@@ -139,9 +161,16 @@ void Node::postClassLock()
 
 void Node::handle(char * buf)
 {
-    printf("%s \n",buf);
+    printf("%s\n",buf);
+    char tmp[256];
+    strcpy(tmp,buf);    
+    char * pch = strtok(tmp,",");//pch = a
+    int nn = atoi(strtok(NULL,","));
+    int nnpn = atoi(strtok(NULL,","));
+    addNode(nn,nnpn,buf);
 	return;
 }
+
 int Node::getListeningSock()
 {
 	return listeningSocket;
