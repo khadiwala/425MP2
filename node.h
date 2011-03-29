@@ -41,8 +41,6 @@ protected:
 	/// maps the I.P. with key based on hashFileMapKey 
 	map<int, string> fileMap;
 
-	//the finger table
-	vector<finger*> fingerTable;
 	 
 	/// set to node or introducer
 	instance instanceof;
@@ -61,6 +59,9 @@ protected:
 	
 public:
 
+	//the finger table
+	vector<finger*> fingerTable;
+
 	Node(int nodeID, int portNumber, int m);
 	~Node();
 
@@ -78,7 +79,7 @@ public:
 	// Calls this.fingerTable.get(0).addNode(node)
 	// base case:  this.instanceof = instance.instructor
 	//////////////////////////////////////////////////////
-	bool addNode(int nodeID, int portNumber);
+	bool addNode(int nodeID, int portNumber, char * buf);
 	
 	/////////////////////////////////////////////////////
 	// add the file to its own system 
