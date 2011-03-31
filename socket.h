@@ -9,6 +9,10 @@
 #include <arpa/inet.h>
 #include <errno.h> 
 #include <iostream>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <limits.h>
 
 #define BACKLOG 10
 
