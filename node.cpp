@@ -1,6 +1,5 @@
 #include "node.h"
-
-
+#include "introducer.h"
 
 Node::Node(int nodeID, int portNumber, int m)
 {
@@ -67,29 +66,10 @@ finger * Node::findFileLocation(int fileID)
 
 bool Node::addNode(int nodeID, int portNumber,char * buf)
 {
-    //TODO:This needs to happen in a different function (updateTable or something)
-    /*//make nessacary adjustments in this finger table
-    for(int i = 0; i < m; i++)
-    {
-        if(fingerTable[i]->nodeID > nodeID && 
-        nodeID >= ((this->nodeID + 1<<i) % (1<<m)))
-        {
-            delete fingerTable[i];
-            finger * f = new finger();
-            f->nodeID = nodeID;
-            f->socket = new_socket();
-            connect(f->socket,portNumber);       
-            fingerTable[i] = f;
-        }
-    }*/
-    
-    //build temp finger table
-
-    if(instanceof == INTRODUCER)
-        printf("this is the wrong addnode function\n");
-
     char tmp[256];
     strcpy(tmp,buf);    
+
+    //build a vector out of the buf
     vector<finger *> newNodeFT;
     char * pch = strtok(tmp,",");
     pch = strtok(NULL,",");  //skip 'a'
@@ -103,16 +83,13 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
         newNodeFT.push_back(temp);
         pch = strtok(NULL,",");
     }
-    
-    //alter temp finger table based on this->nodeID
-    int thisNodeID = this->nodeID;
-    if(this->nodeID < nodeID)
-        thisNodeID += 1<<m; 
+
+    //check each entry from string, see if I/THIS is a better fit for it
     for(int i = 0; i < m; i++)
     {
-        if(thisNodeID >= nodeID + 1<<i && thisNodeID < newNodeFT[i]->nodeID)
-        {    
-            newNodeFT[i]->nodeID = thisNodeID;
+        if(inBetween(this->nodeID,(nodeID + (1<<i)) % (1<<m),newNodeFT[i]->nodeID))
+        {
+            newNodeFT[i]->nodeID = this->nodeID;
             newNodeFT[i]->socket = this->portNumber;
         }
     }
@@ -129,10 +106,7 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
         strcat(tmp,",");
         strcat(tmp,itoa(newNodeFT[i]->socket));
     }
-    if(instanceof == NODE)
-    {
-        s_send(fingerTable[0]->socket,tmp);
-    }
+    s_send(fingerTable[0]->socket,tmp);
 
     //TODO: delete vector
     newNodeFT.clear();    
@@ -161,6 +135,7 @@ void Node::postClassLock()
 
 void Node::handle(char * buf)
 {
+    //in the future this will be an if
     printf("%s\n",buf);
     char tmp[256];
     strcpy(tmp,buf);    
@@ -209,16 +184,56 @@ void * acceptConnections(void * nodeClass)
 void * spawnNewReciever(void * information)
 {
 	spawnNewRecieverInfo info =*((spawnNewRecieverInfo*)information);
-	Node node =*(info.node);
-	int connectedSocket =info.newConnectedSocket;
+	Node node =*((Node*)(info.node));
+    Introducer intro = *((Introducer*)(info.node));
+    int connectedSocket =info.newConnectedSocket;
 	node.postClassLock();
 	char * buf = new char[256];
 	
 	while(s_recv(connectedSocket, buf, 256))	
 	{
-		node.handle(buf);
+        //HOMEBREW POLYMORPHISM FOR THE WIN
+        if(node.getInstance() == INTRODUCER)    
+            intro.handle(buf);
+        else
+    		node.handle(buf);
 	}
 	delete buf;
 	
 	return NULL;
 }
+
+
+//stuff to be added to updateTable or addNodeFinal etc
+    //TODO:This needs to happen in a different function (updateTable or something)
+    /*//make nessacary adjustments in this finger table
+    for(int i = 0; i < m; i++)
+    {
+        if(fingerTable[i]->nodeID > nodeID && 
+        nodeID >= ((this->nodeID + 1<<i) % (1<<m)))
+        {
+            delete fingerTable[i];
+            finger * f = new finger();
+            f->nodeID = nodeID;
+            f->socket = new_socket();
+            connect(f->socket,portNumber);       
+            fingerTable[i] = f;
+        }
+    }*/
+    
+    //build temp finger table
+
+
+//old logic - probably works, safekeeping
+    ////alter temp finger table based on this->nodeID
+    //int thisNodeID = this->nodeID;
+    //if(this->nodeID < nodeID)
+    //    thisNodeID += 1<<m; 
+    //for(int i = 0; i < m; i++)
+    //{
+        //printf("%d,%d\n",thisNodeID, nodeID+(1<<i));
+        //if(thisNodeID >= nodeID + (1<<i) && thisNodeID > newNodeFT[i]->nodeID)
+        //{    
+        //    newNodeFT[i]->nodeID = thisNodeID;
+        //    newNodeFT[i]->socket = this->portNumber;
+        //}

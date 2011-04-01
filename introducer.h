@@ -17,6 +17,11 @@ public:
     * Overides addnode parent method
     */
     bool addNode(int nodeID, int portNumber, char * buf);
+
+    /**
+    *overides handle parent meth
+    */
+    void handle(char * buf);
 private:
     char * FTstring;    //stores the resulting string of the add procedure
 };

@@ -79,7 +79,7 @@ public:
 	// Calls this.fingerTable.get(0).addNode(node)
 	// base case:  this.instanceof = instance.instructor
 	//////////////////////////////////////////////////////
-	bool addNode(int nodeID, int portNumber, char * buf);
+	virtual bool addNode(int nodeID, int portNumber, char * buf);
 	
 	/////////////////////////////////////////////////////
 	// add the file to its own system 
@@ -96,9 +96,9 @@ public:
 	/////////////////////////////////////////////////
 	// Handles the command in buf after recieving message
 	///////////////////////////////////////////////
-	void handle(char * buf);
+	virtual void handle(char * buf);
 };
 
-struct spawnNewRecieverInfo {Node * node; int newConnectedSocket;};
+struct spawnNewRecieverInfo {void * node; int newConnectedSocket;};
 
 #endif

@@ -131,6 +131,20 @@ char * itoa(int integer)
 		modNumber *= 10;
 		divideNumber *= 10;
 	}
+    if(integer == 10)   //hack
+        strcpy(returnChar,"10");
 	return returnChar;
 }
 
+//returns true if arg 1 is in between args 2 and 3 modulo m
+// false if middle = right
+bool inBetween(int middle,int left, int right)
+{
+    if(left <= middle && middle < right)
+        return true;
+    if(middle <= left && middle < right && left > right)
+        return true;
+    if(right < left && (middle >= left || middle < right))
+        return true;
+    return false;
+}
