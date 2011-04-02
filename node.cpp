@@ -1,15 +1,20 @@
 #include "node.h"
 #include "introducer.h"
 
+#define DEBUGLOCK if(true)
+
 Node::Node(int nodeID, int portNumber, int m)
 {
-    this->m = m;
+	printf("Constructing node %i \n", nodeID);
+    	this->m = m;
 	this->nodeID = nodeID;
 	this->portNumber = portNumber;	
 	instanceof = NODE;
 	classLock = new sem_t;
+	strtokLock = new sem_t;
 	sem_init(classLock, 0, 1);
-	
+	sem_init(strtokLock, 0, 1);
+
 	/// set up socket
 	listeningSocket = new_socket();
 	bind(listeningSocket, portNumber);
@@ -37,6 +42,7 @@ Node::~Node()
 	close(listeningSocket);
 	pthread_t * oldThread;
 	sem_destroy(classLock);
+	sem_destroy(strtokLock);
 	while(!connectingThreads.empty())
 	{
 		oldThread = connectingThreads[connectingThreads.size()-1];
@@ -54,13 +60,43 @@ Node::~Node()
 }
 
 
-int Node::hashFileMapKey(int fileID, string fileName)
+int Node::hashFileMapKey(int fileID, char * fileName)
 {
 	return 0;
 }
 
-finger * Node::findFileLocation(int fileID)
+char * Node::findID(int fileID, char * message)
 {
+	bool doWork = false;
+	int socketToMessage;
+	//if successor node holds the token
+	if(inBetween(fileID, nodeID, fingerTable[0]->nodeID))
+	{
+		doWork == true;
+		socketToMessage = fingerTable[0]->socket;
+	}
+	else
+	{
+		//finds the closest node ID we know about that comes before fileID
+		int i;
+		for(i = 0; i < fingerTable.size() - 1; i++)
+		{
+			if(fileID == fingerTable[i]->nodeID)
+			{
+				doWork = true;
+				break;
+			}
+			if(inBetween(fileID, fingerTable[i]->nodeID, fingerTable[i + 1]->nodeID))
+				break;
+		}
+		socketToMessage = fingerTable[i]->socket;
+	}
+	if(doWork)
+	{
+		strcpy(message, "doWork");
+		message[6] = ',';		
+	}
+	s_send(socketToMessage, message);
 	return NULL;
 }
 
@@ -71,6 +107,7 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
 
     //build a vector out of the buf
     vector<finger *> newNodeFT;
+    grabLock(strtokLock);
     char * pch = strtok(tmp,",");
     pch = strtok(NULL,",");  //skip 'a'
     pch = strtok(NULL,",");  //skip new node id
@@ -83,7 +120,7 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
         newNodeFT.push_back(temp);
         pch = strtok(NULL,",");
     }
-
+    postLock(strtokLock);
     //check each entry from string, see if I/THIS is a better fit for it
     for(int i = 0; i < m; i++)
     {
@@ -106,6 +143,7 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
         strcat(tmp,",");
         strcat(tmp,itoa(newNodeFT[i]->socket));
     }
+    printf("%i sending %i message %s\n", this->nodeID, fingerTable[0]->nodeID, tmp);
     s_send(fingerTable[0]->socket,tmp);
 
     //TODO: delete vector
@@ -113,39 +151,86 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
     return true;
 }
 
-bool Node::addFile(int fileID, string fileName, string ipAddress)
+bool Node::addFile(int fileID, char * fileName, char * ipAddress)
 {
+	printf("% adding file %i - %s with ip %s\n", nodeID, fileID, fileName, ipAddress);
 	return false;
 }
 
-bool Node::delFile(int fileID, string fileName)
+bool Node::delFile(int fileID, char * fileName)
 {
 	return false;
 }	
-void  Node::grabClassLock()
+void  Node::grabLock(sem_t * lock)
 {
-	while(sem_wait(classLock) != -0)
-		cout<<"waiting on the class lock failed, trying again\n";
+	DEBUGLOCK printf("%i waiting for lock %p\n", nodeID, lock);
+	while(sem_wait(lock) != -0)
+		cout<<"waiting on the lock failed, trying again\n";
 }
-void Node::postClassLock()
+void Node::postLock(sem_t * lock)
 {
-	while(sem_post(classLock) != 0)
-		cout<<"posting to the class lock failed, trying again\n";
+	DEBUGLOCK printf("%i posting lock %p\n", nodeID, lock);
+	while(sem_post(lock) != 0)
+		cout<<"posting to the lock failed, trying again\n";
 }
-
+void Node::getTable()
+{}
+void Node::quit()
+{}
+void Node::getFileInfo(int fileID, char * fileName)
+{}
 void Node::handle(char * buf)
-{
-    //in the future this will be an if
-    printf("%s\n",buf);
+{ 
+    printf("%i handeling %s\n",nodeID, buf);
     char tmp[256];
-    strcpy(tmp,buf);    
-    char * pch = strtok(tmp,",");//pch = a
-    int nn = atoi(strtok(NULL,","));
-    int nnpn = atoi(strtok(NULL,","));
-    addNode(nn,nnpn,buf);
+    strcpy(tmp,buf);
+    grabLock(strtokLock);    
+    char * pch = strtok(tmp,",");
+    if(strcmp(pch, "a") == 0) //add node
+    {
+	cout<<nodeID<<" got add node command\n";
+    	int nn = atoi(strtok(NULL,","));
+	postLock(strtokLock);
+   	int nnpn = atoi(strtok(NULL,","));
+    	addNode(nn,nnpn,buf);
 	return;
+    }
+    else if(strcmp(pch, "findID") == 0)
+    {
+	int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	postLock(strtokLock);
+	findID(fileID, buf);	
+	return;
+    }
+    else if(strcmp(pch, "doWork") == 0)
+    {
+	int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	char * instruction = strtok(NULL, ","); //should be the instruction
+	char * fileName = strtok(NULL, ","); //could be fileName or NULL
+	char * ipAddress = strtok(NULL, ","); //could be ip or NULL
+	postLock(strtokLock);
+	if(strcmp(instruction, "addFile") == 0)
+	{
+		addFile(fileID, fileName, ipAddress);
+	}
+	else if(strcmp(instruction, "delFile") == 0)
+	{
+		delFile(fileID, fileName);	
+	}
+	else if(strcmp(instruction, "getTabel") == 0)
+	{
+		getTable();
+	}
+	else if(strcmp(instruction, "quit") == 0)
+	{
+		quit();
+	}
+	else if(strcmp(instruction, "findFile") == 0)
+	{
+		getFileInfo(fileID, fileName);
+	}
+    }
 }
-
 int Node::getListeningSock()
 {
 	return listeningSocket;
@@ -171,7 +256,7 @@ void * acceptConnections(void * nodeClass)
 		{
 			///Creates new thread to listen on this connection
 			newThread = new pthread_t;
-			node.grabClassLock();///>will be released in thread
+			node.grabLock(node.classLock);///>will be released in thread
 			info.newConnectedSocket = connectingSocket;
 			node.connectingThreads.push_back(newThread);
 			pthread_create(newThread, NULL, 
@@ -187,7 +272,7 @@ void * spawnNewReciever(void * information)
 	Node node =*((Node*)(info.node));
     Introducer intro = *((Introducer*)(info.node));
     int connectedSocket =info.newConnectedSocket;
-	node.postClassLock();
+	node.postLock(node.classLock);
 	char * buf = new char[256];
 	
 	while(s_recv(connectedSocket, buf, 256))	

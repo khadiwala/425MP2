@@ -31,18 +31,14 @@ void * acceptConnections(void * NodeClass);
 
 class Node
 {
-protected:
-    int m;      ///> m for chord system
+//protected:
+public:
+    	int m;      ///> m for chord system
 	int nodeID; ///> relative node id to the system
 	int portNumber; ///> listening port number
 	int listeningSocket; 
-		
-	// makes the inner workings of the class atomic
-	// I'm not sure if this happens automatically already
-	sem_t * classLock;
-	
-	/// maps the I.P. with key based on hashFileMapKey 
-	map<int, string> fileMap;
+
+	map<int, char *> fileMap;
 
 	 
 	/// set to node or introducer
@@ -52,15 +48,17 @@ protected:
 	// Returns a unique hash kep based on the fileID 
 	// and fileName to be used for the fileMap
 	////////////////////////////////////////////////////
- 	int hashFileMapKey(int fileID, string fileName);
+ 	int hashFileMapKey(int fileID, char * fileName);
 
 	///////////////////////////////////////////////////
 	// return the closest known finger the fileID
 	// or null if the fileID should belong to this node
         ///////////////////////////////////////////////////
-	finger * findFileLocation(int fileID);
-	
-public:
+	char * findID(int fileID, char * message);
+//public	
+	sem_t * classLock;
+	sem_t * strtokLock;
+
 
 	//the finger table
 	vector<finger*> fingerTable;
@@ -73,8 +71,8 @@ public:
 	int getListeningSock();
 	
 	///These should be called before changing class data
-	void grabClassLock();
-	void postClassLock();
+	void grabLock(sem_t * lock);
+	void postLock(sem_t * lock);
 	
 	///////////////////////////////////////////////////////
 	// Figures out if this.fingerTable needs to be changed,
@@ -88,14 +86,17 @@ public:
 	// add the file to its own system 
 	// or forward the message to the appropriate node
 	////////////////////////////////////////////////////
-	bool addFile(int fileID, string fileName, string ipAddress);
+	bool addFile(int fileID, char * fileName, char * ipAddress);
 	
 	///////////////////////////////////////////////////
 	// deletes the file from its own system 
 	// or forwards the message to the appropriate node
 	//////////////////////////////////////////////////
-	bool delFile(int fileID, string fileName);	
+	bool delFile(int fileID, char * fileName);	
 
+	void getTable();
+	void quit();
+	void getFileInfo(int fileID, char * fileName);
 	/////////////////////////////////////////////////
 	// Handles the command in buf after recieving message
 	///////////////////////////////////////////////

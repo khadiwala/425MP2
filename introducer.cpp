@@ -2,20 +2,61 @@
 
 Introducer::Introducer(int nodeId, int portNumber,int m) : Node(nodeId, portNumber, m)
 {
+	printf("constructing introducer\n");
 	instanceof = INTRODUCER;
 }
 
 void Introducer::handle(char * buf)
 {
-    //in the future this will be an if
-    printf("introducer got final ft string: %s\n",buf);
+    printf("introducer handeling %s\n",buf);
     char tmp[256];
-    strcpy(tmp,buf);    
-    char * pch = strtok(tmp,",");//pch = a
-    int nn = atoi(strtok(NULL,","));
-    int nnpn = atoi(strtok(NULL,","));
-    addNode(nn,nnpn,buf);
+    strcpy(tmp,buf);
+    grabLock(strtokLock);    
+    char * pch = strtok(tmp,",");
+    if(strcmp(pch, "a") == 0) //add node
+    {
+	cout<<nodeID<<" got add node command\n";
+    	int nn = atoi(strtok(NULL,","));
+   	int nnpn = atoi(strtok(NULL,","));
+    	addNode(nn,nnpn,buf);
+	postLock(strtokLock);
 	return;
+    }
+    else if(strcmp(pch, "findID") == 0)
+    {
+	int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	postLock(strtokLock);
+	findID(fileID, buf);	
+	return;
+    }
+    else if(strcmp(pch, "doWork") == 0)
+    {
+	int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	char * instruction = strtok(NULL, ","); //should be the instruction
+	char * fileName = strtok(NULL, ","); //could be fileName or NULL
+	char * ipAddress = strtok(NULL, ","); //could be ip or NULL
+	postLock(strtokLock);
+	if(strcmp(instruction, "addFile") == 0)
+	{
+		addFile(fileID, fileName, ipAddress);
+	}
+	else if(strcmp(instruction, "delFile") == 0)
+	{
+		delFile(fileID, fileName);	
+	}
+	else if(strcmp(instruction, "getTabel") == 0)
+	{
+		getTable();
+	}
+	else if(strcmp(instruction, "quit") == 0)
+	{
+		quit();
+	}
+	else if(strcmp(instruction, "findFile") == 0)
+	{
+		getFileInfo(fileID, fileName);
+	}
+    }
 }
 int Introducer::addNewNode(int nodeID, int portNumber)
 {

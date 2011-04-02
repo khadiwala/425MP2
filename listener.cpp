@@ -29,7 +29,9 @@ int main()
     }    
     int lsock = new_socket();
     connect(lsock,INTROPORT);
-    sleep(100);
-	return 0;
+    char c;
+    while(cin>>c)
+	if(c=='X')
+		break;
 }
 
