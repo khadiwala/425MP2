@@ -81,6 +81,8 @@ public:
 	// base case:  this.instanceof = instance.instructor
 	//////////////////////////////////////////////////////
 	virtual bool addNode(int nodeID, int portNumber, char * buf);
+
+    virtual void addNodeAdjust(int nodeID, int portNumber);
 	
 	/////////////////////////////////////////////////////
 	// add the file to its own system 

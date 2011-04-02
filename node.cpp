@@ -1,7 +1,7 @@
 #include "node.h"
 #include "introducer.h"
 
-#define DEBUGLOCK if(true)
+#define DEBUGLOCK if(false)
 
 Node::Node(int nodeID, int portNumber, int m)
 {
@@ -151,6 +151,11 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
     return true;
 }
 
+void Node::addNodeAdjust(int nodeID, int portNumber)
+{
+    printf("got an adjust message node:%d\n",this->nodeID);
+}
+
 bool Node::addFile(int fileID, char * fileName, char * ipAddress)
 {
 	printf("% adding file %i - %s with ip %s\n", nodeID, fileID, fileName, ipAddress);
@@ -181,54 +186,58 @@ void Node::getFileInfo(int fileID, char * fileName)
 {}
 void Node::handle(char * buf)
 { 
-    printf("%i handeling %s\n",nodeID, buf);
+    printf("%i handling %s\n",nodeID, buf);
     char tmp[256];
     strcpy(tmp,buf);
     grabLock(strtokLock);    
     char * pch = strtok(tmp,",");
     if(strcmp(pch, "a") == 0) //add node
     {
-	cout<<nodeID<<" got add node command\n";
+	    cout<<nodeID<<" got add node command\n";
     	int nn = atoi(strtok(NULL,","));
-	postLock(strtokLock);
-   	int nnpn = atoi(strtok(NULL,","));
+   	    int nnpn = atoi(strtok(NULL,","));
+	    postLock(strtokLock);
     	addNode(nn,nnpn,buf);
-	return;
+	    return;
+    }
+    else if(strcmp(pch,"aadjust") == 0)
+    {
+        int nn = atoi
     }
     else if(strcmp(pch, "findID") == 0)
     {
-	int fileID = atoi(strtok(NULL, ",")); // should be the file id
-	postLock(strtokLock);
-	findID(fileID, buf);	
-	return;
+	    int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	    postLock(strtokLock);
+	    findID(fileID, buf);	
+	    return;
     }
     else if(strcmp(pch, "doWork") == 0)
     {
-	int fileID = atoi(strtok(NULL, ",")); // should be the file id
-	char * instruction = strtok(NULL, ","); //should be the instruction
-	char * fileName = strtok(NULL, ","); //could be fileName or NULL
-	char * ipAddress = strtok(NULL, ","); //could be ip or NULL
-	postLock(strtokLock);
-	if(strcmp(instruction, "addFile") == 0)
-	{
-		addFile(fileID, fileName, ipAddress);
-	}
-	else if(strcmp(instruction, "delFile") == 0)
-	{
-		delFile(fileID, fileName);	
-	}
-	else if(strcmp(instruction, "getTabel") == 0)
-	{
-		getTable();
-	}
-	else if(strcmp(instruction, "quit") == 0)
-	{
-		quit();
-	}
-	else if(strcmp(instruction, "findFile") == 0)
-	{
-		getFileInfo(fileID, fileName);
-	}
+	    int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	    char * instruction = strtok(NULL, ","); //should be the instruction
+	    char * fileName = strtok(NULL, ","); //could be fileName or NULL
+	    char * ipAddress = strtok(NULL, ","); //could be ip or NULL
+	    postLock(strtokLock);
+	    if(strcmp(instruction, "addFile") == 0)
+	    {
+	    	addFile(fileID, fileName, ipAddress);
+	    }
+	    else if(strcmp(instruction, "delFile") == 0)
+	    {
+	    	delFile(fileID, fileName);	
+	    }
+	    else if(strcmp(instruction, "getTabel") == 0)
+	    {
+	    	getTable();
+	    }
+	    else if(strcmp(instruction, "quit") == 0)
+	    {
+	    	quit();
+	    }
+	    else if(strcmp(instruction, "findFile") == 0)
+	    {
+	    	getFileInfo(fileID, fileName);
+	    }
     }
 }
 int Node::getListeningSock()

@@ -15,47 +15,47 @@ void Introducer::handle(char * buf)
     char * pch = strtok(tmp,",");
     if(strcmp(pch, "a") == 0) //add node
     {
-	cout<<nodeID<<" got add node command\n";
+	    cout<<nodeID<<" got add node command\n";
     	int nn = atoi(strtok(NULL,","));
-   	int nnpn = atoi(strtok(NULL,","));
+   	    int nnpn = atoi(strtok(NULL,","));
+	    postLock(strtokLock);
     	addNode(nn,nnpn,buf);
-	postLock(strtokLock);
-	return;
+	    return;
     }
     else if(strcmp(pch, "findID") == 0)
     {
-	int fileID = atoi(strtok(NULL, ",")); // should be the file id
-	postLock(strtokLock);
-	findID(fileID, buf);	
-	return;
+	    int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	    postLock(strtokLock);
+	    findID(fileID, buf);	
+	    return;
     }
     else if(strcmp(pch, "doWork") == 0)
     {
-	int fileID = atoi(strtok(NULL, ",")); // should be the file id
-	char * instruction = strtok(NULL, ","); //should be the instruction
-	char * fileName = strtok(NULL, ","); //could be fileName or NULL
-	char * ipAddress = strtok(NULL, ","); //could be ip or NULL
-	postLock(strtokLock);
-	if(strcmp(instruction, "addFile") == 0)
-	{
-		addFile(fileID, fileName, ipAddress);
-	}
-	else if(strcmp(instruction, "delFile") == 0)
-	{
-		delFile(fileID, fileName);	
-	}
-	else if(strcmp(instruction, "getTabel") == 0)
-	{
-		getTable();
-	}
-	else if(strcmp(instruction, "quit") == 0)
-	{
-		quit();
-	}
-	else if(strcmp(instruction, "findFile") == 0)
-	{
-		getFileInfo(fileID, fileName);
-	}
+	    int fileID = atoi(strtok(NULL, ",")); // should be the file id
+	    char * instruction = strtok(NULL, ","); //should be the instruction
+	    char * fileName = strtok(NULL, ","); //could be fileName or NULL
+	    char * ipAddress = strtok(NULL, ","); //could be ip or NULL
+	    postLock(strtokLock);
+	    if(strcmp(instruction, "addFile") == 0)
+	    {
+	    	addFile(fileID, fileName, ipAddress);
+	    }
+	    else if(strcmp(instruction, "delFile") == 0)
+	    {
+	    	delFile(fileID, fileName);	
+	    }
+	    else if(strcmp(instruction, "getTabel") == 0)
+	    {
+	    	getTable();
+	    }
+	    else if(strcmp(instruction, "quit") == 0)
+	    {
+	    	quit();
+	    }
+	    else if(strcmp(instruction, "findFile") == 0)
+	    {
+	    	getFileInfo(fileID, fileName);
+	    }
     }
 }
 int Introducer::addNewNode(int nodeID, int portNumber)
@@ -121,6 +121,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         {
             printf("new nodes ft recieved: %s \n",buf);
             vector<int> FTdata;
+            grabLock(strtokLock);
             char * pch = strtok(buf,",");
             pch = strtok(NULL,",");  //skip 'a'
             pch = strtok(NULL,",");  //skip new node id
@@ -130,6 +131,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
                 FTdata.push_back(atoi(pch));
                 pch = strtok(NULL,",");
             }
+            postLock(strtokLock);
             //construct finger table from message
             for(int i = 0; i < m; i++)
             {
@@ -145,10 +147,13 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
             sleep(1);
     }
 
-    else {  //parent
+    else //parent
+    {        
         //shouldn't need those fingers any more
         for(int i = 0; i < m; i++)
             delete newft[i];
+
+        sleep(2);//TODO: somehow wait until new node has been constructed in fork
 
         //adjust introducer table (must be done after fork)
         for(int i = 0; i < m; i++)
@@ -163,7 +168,16 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
                 fingerTable[i] = f;
             }
         }
+
+        //send a message for adjustment walk
+        //char message[256];
+        //strcpy(message,"aadjust,");
+        //strcat(message,itoa(nodeID));
+        //strcat(message,",");
+        //strcat(message,itoa(portNumber));
+        //s_send(fingerTable[0]->socket, message);
     }
+
     return true;
 }
 

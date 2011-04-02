@@ -27,6 +27,7 @@ int main()
         (*introducer).addNewNode(10,INTROPORT+2);
         sleep(100); //hack
     }    
+    sleep(1);
     int lsock = new_socket();
     connect(lsock,INTROPORT);
     char c;
