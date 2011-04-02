@@ -22,6 +22,13 @@ void Introducer::handle(char * buf)
     	addNode(nn,nnpn,buf);
 	    return;
     }
+    else if(strcmp(pch,"aadjust") == 0)
+    {
+        int nn = atoi(strtok(NULL,","));
+        int nnpn = atoi(strtok(NULL,","));
+        postLock(strtokLock);
+        addNodeAdjust(nn,nnpn);
+    }
     else if(strcmp(pch, "findID") == 0)
     {
 	    int fileID = atoi(strtok(NULL, ",")); // should be the file id
@@ -170,15 +177,20 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         }
 
         //send a message for adjustment walk
-        //char message[256];
-        //strcpy(message,"aadjust,");
-        //strcat(message,itoa(nodeID));
-        //strcat(message,",");
-        //strcat(message,itoa(portNumber));
-        //s_send(fingerTable[0]->socket, message);
+        printf("sending adjustment message\n");
+        char message[256];
+        strcpy(message,"aadjust,");
+        strcat(message,itoa(nodeID));
+        strcat(message,",");
+        strcat(message,itoa(portNumber));
+        s_send(fingerTable[0]->socket, message);
     }
 
     return true;
+}
+
+void Introducer::addNodeAdjust(int nodeID, int portNumber){
+    printf("introducer got m\n");
 }
 
 

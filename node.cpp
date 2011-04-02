@@ -202,7 +202,10 @@ void Node::handle(char * buf)
     }
     else if(strcmp(pch,"aadjust") == 0)
     {
-        int nn = atoi
+        int nn = atoi(strtok(NULL,","));
+        int nnpn = atoi(strtok(NULL,","));
+        postLock(strtokLock);
+        addNodeAdjust(nn,nnpn);
     }
     else if(strcmp(pch, "findID") == 0)
     {
