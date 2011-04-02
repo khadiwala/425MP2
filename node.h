@@ -82,7 +82,7 @@ public:
 	//////////////////////////////////////////////////////
 	virtual bool addNode(int nodeID, int portNumber, char * buf);
 
-    virtual void addNodeAdjust(int nodeID, int portNumber);
+    virtual void addNodeAdjust(int nodeID, int portNumber, char * msg);
 	
 	/////////////////////////////////////////////////////
 	// add the file to its own system 

@@ -31,7 +31,7 @@ Node::Node(int nodeID, int portNumber, int m)
     for(i = 0; i < m; i++)
     {
         finger * f = new finger();
-        f->nodeID = 1<<m;
+        f->nodeID = 0;
         f->socket = -1;
         fingerTable.push_back(f);
     }
@@ -151,9 +151,11 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
     return true;
 }
 
-void Node::addNodeAdjust(int nodeID, int portNumber)
+void Node::addNodeAdjust(int nodeID, int portNumber, char * msg)
 {
     printf("got an adjust message node:%d\n",this->nodeID);
+    s_send(fingerTable[0]->socket,msg);
+    
 }
 
 bool Node::addFile(int fileID, char * fileName, char * ipAddress)
@@ -205,7 +207,7 @@ void Node::handle(char * buf)
         int nn = atoi(strtok(NULL,","));
         int nnpn = atoi(strtok(NULL,","));
         postLock(strtokLock);
-        addNodeAdjust(nn,nnpn);
+        addNodeAdjust(nn,nnpn,buf);
     }
     else if(strcmp(pch, "findID") == 0)
     {

@@ -8,7 +8,7 @@ Introducer::Introducer(int nodeId, int portNumber,int m) : Node(nodeId, portNumb
 
 void Introducer::handle(char * buf)
 {
-    printf("introducer handeling %s\n",buf);
+    printf("introducer handling %s\n",buf);
     char tmp[256];
     strcpy(tmp,buf);
     grabLock(strtokLock);    
@@ -27,7 +27,7 @@ void Introducer::handle(char * buf)
         int nn = atoi(strtok(NULL,","));
         int nnpn = atoi(strtok(NULL,","));
         postLock(strtokLock);
-        addNodeAdjust(nn,nnpn);
+        addNodeAdjust(nn,nnpn,buf);
     }
     else if(strcmp(pch, "findID") == 0)
     {
@@ -92,33 +92,22 @@ int Introducer::addNewNode(int nodeID, int portNumber)
 
 bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 
-    vector<finger*> newft;
-    if(fingerTable[0]->socket == -1){ //this is the first new node
-        for(int i = 0; i < m; i++){   //all of its fingers point to 0
-            finger* f = new finger();
-            f->nodeID = 0;
-            f->socket = -1;
-            newft.push_back(f);
-        }
-    }
-
     //fork new node
     if(fork() == 0)
     {
-        printf("forking a new node!\n");
+        printf("forking a new node: %d!\n",nodeID);
         Node * newNode = new Node(nodeID,portNumber,m);
         //if this is the first new node added...
         if(fingerTable[0]->socket == -1)
         {
             printf("first new node\n");
             for(int i = 0; i < m; i++){
-                if(nodeID + 1<<i > 32)
-                    newNode->fingerTable[i]->nodeID = nodeID;
+                if(nodeID + 1<<i > 1<<m)
+                {
+                    newNode->fingerTable[i]->nodeID = newNode->nodeID;
+                }
                 else
                 {
-                    delete newNode->fingerTable[i];
-                    newNode->fingerTable[i] = newft[i];
-                    //printf("fing[i] = %d\n",newNode->fingerTable[i]->nodeID);
                     newNode->fingerTable[i]->socket = new_socket();
                     connect(newNode->fingerTable[i]->socket,this->portNumber);   // connect to introducer
                 }
@@ -156,28 +145,24 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 
     else //parent
     {        
-        //shouldn't need those fingers any more
-        for(int i = 0; i < m; i++)
-            delete newft[i];
-
         sleep(2);//TODO: somehow wait until new node has been constructed in fork
 
         //adjust introducer table (must be done after fork)
         for(int i = 0; i < m; i++)
         {
-            if(fingerTable[i]->nodeID > nodeID && nodeID >= 1<<i)
+            if(inBetween(nodeID,(this->nodeID + 1<<i),fingerTable[i]->nodeID))
             {
-                delete fingerTable[i];
-                finger * f = new finger();
-                f->nodeID = nodeID;
-                f->socket = new_socket();
-                connect(f->socket,portNumber);
-                fingerTable[i] = f;
+                printf("introducer ft:%d is changing \n",i);
+                close(fingerTable[i]->socket);
+                fingerTable[i]->nodeID = nodeID;
+                fingerTable[i]->socket = new_socket();
+                connect(fingerTable[i]->socket,portNumber);
             }
         }
 
         //send a message for adjustment walk
         printf("sending adjustment message\n");
+        printf("%d \n",fingerTable[0]->socket);
         char message[256];
         strcpy(message,"aadjust,");
         strcat(message,itoa(nodeID));
@@ -189,7 +174,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
     return true;
 }
 
-void Introducer::addNodeAdjust(int nodeID, int portNumber){
+void Introducer::addNodeAdjust(int nodeID, int portNumber, char * buf){
     printf("introducer got m\n");
 }
 

@@ -18,7 +18,7 @@ public:
     */
     bool addNode(int nodeID, int portNumber, char * buf);
 
-    void addNodeAdjust(int nodeID, int portNumber);
+    void addNodeAdjust(int nodeID, int portNumber, char * msg);
 
     /**
     *overides handle parent meth
