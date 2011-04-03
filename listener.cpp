@@ -110,10 +110,18 @@ void parseSend(string line,int * i,int sockfd){
 
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    m = 5;
-	cout<<"listener started\n";
+    if (argc != 2){
+        cout<<"Invalid arguments"<<endl;
+        exit(1);
+    }
+    int m = atoi(argv[1]);
+	cout<<"listener started with " << m << " nodes"<<endl;
+
+    cout << "would you like to use a [F]ile or [T]erminal to input commands?" << endl;
+    string mode = "";
+    cin >> mode;
     if(fork() == 0)
     {
         Introducer * introducer = new Introducer(0,INTROPORT,m);
@@ -125,27 +133,62 @@ int main()
     
     //Listener functions here
     int lsock = new_socket();
-    ifstream listenerFile;
+    //ifstream listenerFile; 
+    FILE * f;
     string line;
-    listenerFile.open("ListenerFile.txt");
-    
-    if (listenerFile.is_open()){
-        int i = 1;
-        connect(lsock,INTROPORT);
-        while ( listenerFile.good()){
-            getline(listenerFile,line);
-            parseSend(line,&i,lsock);
-            sleep(2);
-            //cout<<"ListenerFile read "<<line<<endl;
+
+    if(!mode.compare("T") || !mode.compare("t")){
+	int i = 1;
+	char command[256];
+	connect(lsock,INTROPORT);
+        while(mode.compare("exit")){
+	    
+            cout << "type command or \"exit\" to quit" << endl;
+	    //cin.getline(command,256);
+	    scanf("%s", command);
+	    cout<<"terminal sent " << command<<endl;
+            parseSend(command,&i,lsock);
         }
-        listenerFile.close();
-        sleep(100);
+	
     }
-    cout << "Failed to open File" << endl;
+    else if (!mode.compare("F") || !mode.compare("f")){
+	   cout << "Enter Filename" <<endl;
+	   //cin >> mode;
+	   cin >> mode;
+	   cout<<mode;
+	   f = fopen((char *)mode.c_str(), "r");
+	   char buf[256];
+	   int i = 1;
+	   connect(lsock,INTROPORT);
+	   while(fgets(buf, 256, f) != NULL){
+		//printf("%s \n", buf);
+		line = buf;
+		parseSend(line,&i,lsock);
+	   }
+	   
+	   //listenerFile.open(buf);
+	   ////f = fopen(mode.c_str(),"r");
+	   //char* buf[256];
+	   // if (listenerFile.is_open()){//f = NULL){
+	   //     int i = 1;
+	   //     connect(lsock,INTROPORT);
+	   //     while ( listenerFile.//fread(buf,256,256,f) != 0 ){
+	   //         //getline(f,line);
+	   //         line = buf;
+	   //         parseSend(line,&i,lsock);
+	   //         sleep(2);
+	   //         //cout<<"ListenerFile read "<<line<<endl;
+	   //     }
+	   //     //f.close();
+	   //     fclose(f);
+	   //     sleep(100);
+	   // }
+    //cout << "Failed to open File" << endl;
     sleep(100);
 	
     
-    return 0;
+    return 0; 
+    }
 }
 
 
