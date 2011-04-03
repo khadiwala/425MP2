@@ -11,7 +11,7 @@ public:
 	/**
 	* Should fork a new process for the new node.	
 	*/
-	int addNewNode(int nodeID, int portNumber); 
+	int addNewNode(int nodeID, int portNumber, char * buf); 
 
     /**
     * Overides addnode parent method

@@ -79,6 +79,8 @@ public:
 	virtual bool addNode(int nodeID, int portNumber, char * buf);
 
     virtual void addNodeAdjust(int nodeID, int portNumber, char * msg);
+
+    void recieveFile(int fileID, char * buf);
 	
 	/////////////////////////////////////////////////////
 	// add the file to its own system 

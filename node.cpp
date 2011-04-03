@@ -40,8 +40,7 @@ Node::Node(int nodeID, int portNumber, int m)
 }
 Node::~Node()
 {
-    
-        printf("NODE:%d IS DEAD--------\n",this->nodeID);
+    printf("NODE:%d IS DEAD--------\n",this->nodeID);
     if(instanceof == DEAD)
     {
     	instanceof = DEAD;
@@ -110,7 +109,7 @@ char * Node::findID(int fileID, char * message)
 
 bool Node::addNode(int nodeID, int portNumber,char * buf)
 {
-    char tmp[1024];
+    char tmp[256];
     strcpy(tmp,buf);    
 
     //build a vector out of the buf
@@ -155,6 +154,8 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
     s_send(fingerTable[0]->socket,tmp);
 
     //TODO: delete vector
+    for(int i = 0; i < m; i++)
+        delete newNodeFT[i];
     newNodeFT.clear();    
     return true;
 }
@@ -173,19 +174,52 @@ void Node::addNodeAdjust(int nodeID, int portNumber, char * msg)
             fingerTable[i]->socket = new_socket();
             connect(fingerTable[i]->socket,portNumber);
         }
-    }
+    }  
+    char * succloc;
+    if((succloc = strstr(msg,",succ")) != NULL)
+    {
+        map<int,char*>::iterator it;
+        for(it = fileMap.begin(); it != fileMap.end(); it++)
+        {
+            if(inBetween(nodeID,it->first,this->nodeID))
+            {
+                int predSocket = new_socket();
+                connect(predSocket,portNumber);
+                char buf[256];
+                strcpy(buf,"recieve,");
+                strcat(buf,itoa(it->first));
+                strcat(buf,",");
+                strcat(buf,it->second);
+                //printf("node:%d sending %s \n",this->nodeID,buf);
+                s_send(predSocket,buf);
+                close(predSocket);
+            }
+        }
+        *succloc = 0;
+    }        
     postLock(classLock);
     printf("forwarding message to node:%d, corresponding socket: %d\n",fingerTable[0]->nodeID,fingerTable[0]->socket);
+    if(this->nodeID == nodeID)
+        strcat(msg,",succ");
     s_send(fingerTable[0]->socket,msg);
 }
-
-bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message)
+void Node::recieveFile(int fileID, char * buf)
 {
-	printf("% adding file %i - %s with ip %s\n", nodeID, fileID, fileName, ipAddress);
+    printf("recieved a file:%s\n",buf);
+    grabLock(classLock);
+    fileMap[fileID] = buf;
+    postLock(classLock);
+    return;
+}
+
+
+
+bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message){
+	printf("%i adding file %i - %s with ip %s\n", nodeID, fileID, fileName, ipAddress);
 	char * contents;
 	if(fileMap.count(fileID) == 0)
 	{
-		contents = new char[1024];
+		contents = new char[256];
 		contents[0] = 0;
 		fileMap[fileID] = contents;
 	}
@@ -208,7 +242,7 @@ bool Node::delFile(int fileID, char * fileName, char * message)
 	strcat(message, itoa(fileID));
 	strcat(message, fileName);
 	char * status = NULL;
-	char newContents[1024]; //this will store the new file contents if we delete a file
+	char newContents[256]; //this will store the new file contents if we delete a file
 	newContents[0] = 0;
 	if(fileMap.count(fileID) != 0)
 	{
@@ -327,7 +361,7 @@ void Node::getFileInfo(int fileID, char * fileName, char * message)
 void Node::handle(char * buf)
 { 
     printf("%i handling %s\n",nodeID, buf);
-    char tmp[1024];
+    char tmp[256];
     strcpy(tmp,buf);
     grabLock(strtokLock);    
     char * pch = strtok(tmp,",");
@@ -346,6 +380,12 @@ void Node::handle(char * buf)
         int nnpn = atoi(strtok(NULL,","));
         postLock(strtokLock);
         addNodeAdjust(nn,nnpn,buf);
+    }
+    else if(strcmp(pch,"recieve") == 0)
+    {
+        int fileID = atoi(strtok(NULL,","));
+        postLock(strtokLock);
+        recieveFile(fileID,buf);        
     }
     else if(strcmp(pch, "findID") == 0)
     {
@@ -381,6 +421,11 @@ void Node::handle(char * buf)
 	    {
 	    	getFileInfo(fileID, fileName, buf);
 	    }
+    }
+    else
+    {
+        printf("LOOK AT ME %s \n", buf);
+        postLock(strtokLock);
     }
 }
 int Node::getListeningSock()
@@ -425,21 +470,21 @@ void * spawnNewReciever(void * information)
     int connectedSocket =info.newConnectedSocket;
 	node->postLock(node->classLock);
     char * c = new char[2];
-	char * buf = new char[1024];
+	char * buf = new char[256];
 	int i = 0;
 	while(s_recv(connectedSocket, c, 1))	
 	{
-        c[1] = 0;
-        if(strcmp(c,".") == 0)
-        {
-    	    node->handle(buf);
-            strcpy(buf,"");
-        }
-        else
-            strcat(buf,c);
+        	c[1] = 0;
+        	if(strcmp(c,"+") == 0)
+        	{
+    			node->handle(buf);
+        		strcpy(buf,"");
+        	}
+        	else
+            		strcat(buf,c);
 	}
 	delete buf;
-    node = NULL;
+    	node = NULL;
 	return NULL;
 }
 

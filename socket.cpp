@@ -110,7 +110,7 @@ void s_send(int sfd, char* buf)
 {
     if(send(sfd,buf,strlen(buf),0) == -1)
         perror("error writing to socket");
-    if(send(sfd,".",strlen("."),0) == -1)
+    if(send(sfd,"+",strlen("+"),0) == -1)
         perror("error writing . to socket");
 }
 

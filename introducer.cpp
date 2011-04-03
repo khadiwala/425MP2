@@ -9,18 +9,18 @@ Introducer::Introducer(int nodeId, int portNumber,int m) : Node(nodeId, portNumb
 void Introducer::handle(char * buf)
 {
     printf("introducer handling %s\n",buf);
-    char tmp[1024];
+    char tmp[256];
     strcpy(tmp,buf);
     grabLock(strtokLock);    
     char * pch = strtok(tmp,",");
     if(strcmp(pch, "a") == 0) //add node
     {
-	    cout<<nodeID<<" got add node command\n";
+	cout<<nodeID<<" got add node command\n";
     	int nn = atoi(strtok(NULL,","));
-   	    int nnpn = atoi(strtok(NULL,","));
-	    postLock(strtokLock);
-    	addNode(nn,nnpn,buf);
-	    return;
+   	int nnpn = atoi(strtok(NULL,","));
+	postLock(strtokLock);
+        addNode(nn,nnpn,buf);
+	return;
     }
     else if(strcmp(pch,"aadjust") == 0)
     {
@@ -45,7 +45,9 @@ void Introducer::handle(char * buf)
 	    postLock(strtokLock);
 	    if(strcmp(instruction, "addFile") == 0)
 	    {
+		cout<<"intro adding file\n";
 	    	addFile(fileID, fileName, ipAddress, buf);
+		cout<<"done adding file\n";
 	    }
 	    else if(strcmp(instruction, "delFile") == 0)
 	    {
@@ -80,8 +82,15 @@ void Introducer::handle(char * buf)
 		cout<<"Introducer know that a file has been got\n";	
 	    }
     }
+    else if(strcmp(pch,"addnew") == 0)
+    {
+        int nn = atoi(strtok(NULL,","));
+        int nnpn = atoi(strtok(NULL,","));
+        postLock(strtokLock);
+        addNewNode(nn,nnpn, buf);
+    }
 }
-int Introducer::addNewNode(int nodeID, int portNumber)
+int Introducer::addNewNode(int nodeID, int portNumber, char * buf)
 {
     grabLock(addNodeLock);  //released when finished
     printf("adding node %d \n", nodeID);
@@ -90,7 +99,6 @@ int Introducer::addNewNode(int nodeID, int portNumber)
         addNode(nodeID,portNumber,NULL);
     }
     else{                               //begin initialization ring walk
-        char buf[1024];
         strcpy(buf,"a,");
         strcat(buf,itoa(nodeID));
         strcat(buf,",");
@@ -186,7 +194,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 
         //send a message for adjustment walk
         //printf("introducer sending an initial adjustment message\n");
-        char message[1024];
+        char message[256];
         strcpy(message,"aadjust,");
         strcat(message,itoa(nodeID));
         strcat(message,",");

@@ -5,10 +5,10 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-
+#include "mp2_sha1-c/sha1.h"
 #define INTROPORT 4325
 using namespace std;
-
+int m;
 void parseSend(string line,int * i,int sockfd){
     //Options are ADD_LINE, ADD_FILE, ADD_NODE, GET_TABLE, SLEEP, DEL_FILE, FIND_FILE
     stringstream ss (stringstream::in | stringstream::out);
@@ -16,17 +16,34 @@ void parseSend(string line,int * i,int sockfd){
     ss << line;
     string token;
     ss >> token;
-
+    
     //Token is now the first word in the file
 
 	cout << "Token is "<<token<<endl;
     if (!token.compare("ADD_FILE")){
-         cout<<"trying to add file"<<endl;
-         tosend.append("af;");
-         while( ss >> token){
-             tosend.append(token);
-             tosend.append(";");
-         }
+	ss >> token;
+	SHA1Context sha;
+	SHA1Reset(&sha);
+	//unsigned char * tmp = new unsigned char[token.size() + 1];
+	//strcpy(tmp, token.c_str());
+	SHA1Input(&sha, (const unsigned char*)token.c_str(), token.size());
+	if(!SHA1Result(&sha))
+		fprintf(stderr, "could not hash\n");
+	int fileID = sha.Message_Digest[4]%((int)(1<<m));
+	cout<<"fileID for "<<token<<" is : "<<fileID<<endl;
+        cout<<"trying to add file"<<endl;
+        tosend.append("findID,"); //findID,<fileID>,addFile,<fileName>,<ip>
+	tosend.append(itoa(fileID));
+	tosend.append(",addFile,");
+	tosend.append(token);
+	tosend.append(",");
+	ss >> token;
+	tosend.append(token);
+	//char * tmp = new char[tosend.size() + 1];
+	//strcpy(tmp, tosend.c_str());
+	s_send(sockfd, (char *)(tosend.c_str()));
+	//delete tmp;
+	
      }
 
 	else if (!token.compare("ADD_NODE")){
@@ -34,13 +51,15 @@ void parseSend(string line,int * i,int sockfd){
             //tosend.append("addnew,");
             while( ss >> token){
                 //tosend.append(token);
+		sleep(1);
                 //s_send(token
-                char tmp[tosend.size() + 1];
+                char tmp [tosend.size() + 1];
                 strcpy(tmp,"addnew,");
                 strcat(tmp,token.c_str());
                 strcat(tmp,",");
-                strcat(tmp,itoa(INTROPORT+ *i));
-                strcat(tmp,",");
+                strcat(tmp,itoa(INTROPORT+ *i));        
+		//strcat(tmp,",");
+		printf("tmp --- %s\n", tmp);
                 s_send(sockfd,tmp);
                 (*i)++;
             }
@@ -93,7 +112,7 @@ void parseSend(string line,int * i,int sockfd){
 
 int main()
 {
-    int m = 5;
+    m = 5;
 	cout<<"listener started\n";
     if(fork() == 0)
     {
