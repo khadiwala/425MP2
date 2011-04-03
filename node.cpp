@@ -69,23 +69,26 @@ char * Node::findID(int fileID, char * message)
 {
 	bool doWork = false;
 	int socketToMessage;
+	int i = 0;
 	//if I am the node
 	if(fileID == nodeID)
 	{
 		strcpy(message, "doWork");
 		message[6] = ',';
-		handle(message);	
+		handle(message);
+		return NULL;	
 	}
 	//if successor node holds the token
 	if(inBetween(fileID, nodeID, fingerTable[0]->nodeID))
 	{
-		doWork == true;
+		cout<<nodeID<<" setting start of message to do work\n";
+		doWork = true;
 		socketToMessage = fingerTable[0]->socket;
 	}
 	else
 	{
+		cout<<nodeID<<" trying to find a node for file  "<<fileID<<endl;
 		//finds the closest node ID we know about that comes before fileID
-		int i;
 		for(i = 0; i < fingerTable.size() - 1; i++)
 		{
 			if(fileID == fingerTable[i]->nodeID)
@@ -100,9 +103,12 @@ char * Node::findID(int fileID, char * message)
 	}
 	if(doWork)
 	{
+		cout<<nodeID<<" found "<<fingerTable[0]->nodeID<<" to hold "<<fileID<<" message ";
+		printf(" %s\n", message);
 		strcpy(message, "doWork");
 		message[6] = ',';		
 	}
+	printf("%i sending %i message %s\n", nodeID, fingerTable[i]->nodeID, message);
 	s_send(socketToMessage, message);
 	return NULL;
 }
@@ -232,7 +238,9 @@ bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message
 	
 	strcpy(message, "findID,0,AddedFile,");
 	strcat(message, itoa(nodeID));
+	cout<<nodeID<<" fileMap contents for fileID "<<fileID<<" is now "<<contents<<endl;
 	findID(0,message);	
+	
 	return true;
 }
 

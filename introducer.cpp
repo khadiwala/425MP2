@@ -205,9 +205,33 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
     return true;
 }
 
-void Introducer::addNodeAdjust(int nodeID, int portNumber, char * buf){
+void Introducer::addNodeAdjust(int nodeID, int portNumber, char * msg){
     printf("introducer got m\n");
     postLock(addNodeLock);
+    grabLock(classLock);
+    char * succloc;
+    if((succloc = strstr(msg,",succ")) != NULL)
+    {
+        map<int,char*>::iterator it;
+        for(it = fileMap.begin(); it != fileMap.end(); it++)
+        {
+            if(inBetween(nodeID,it->first,this->nodeID))
+            {
+                int predSocket = new_socket();
+                connect(predSocket,portNumber);
+                char buf[256];
+                strcpy(buf,"recieve,");
+                strcat(buf,itoa(it->first));
+                strcat(buf,",");
+                strcat(buf,it->second);
+                //printf("node:%d sending %s \n",this->nodeID,buf);
+                s_send(predSocket,buf);
+                close(predSocket);
+            }
+        }
+        *succloc = 0;
+    }        
+    postLock(classLock);
 }
 
 
