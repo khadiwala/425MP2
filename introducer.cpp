@@ -9,7 +9,7 @@ Introducer::Introducer(int nodeId, int portNumber,int m) : Node(nodeId, portNumb
 void Introducer::handle(char * buf)
 {
     printf("introducer handling %s\n",buf);
-    char tmp[256];
+    char tmp[1024];
     strcpy(tmp,buf);
     grabLock(strtokLock);    
     char * pch = strtok(tmp,",");
@@ -45,23 +45,39 @@ void Introducer::handle(char * buf)
 	    postLock(strtokLock);
 	    if(strcmp(instruction, "addFile") == 0)
 	    {
-	    	addFile(fileID, fileName, ipAddress);
+	    	addFile(fileID, fileName, ipAddress, buf);
 	    }
 	    else if(strcmp(instruction, "delFile") == 0)
 	    {
-	    	delFile(fileID, fileName);	
+	    	delFile(fileID, fileName, buf);	
 	    }
 	    else if(strcmp(instruction, "getTabel") == 0)
 	    {
-	    	getTable();
+	    	getTable(buf);
 	    }
 	    else if(strcmp(instruction, "quit") == 0)
 	    {
-	    	quit();
+	    	quit(buf);
 	    }
 	    else if(strcmp(instruction, "findFile") == 0)
 	    {
-	    	getFileInfo(fileID, fileName);
+	    	getFileInfo(fileID, fileName, buf);
+	    }
+	    else if(strcmp(instruction, "AddedFile") == 0)
+	    {
+		cout<<"introducer knows that a file has been added\n";
+	    }
+	    else if(strcmp(instruction, "DeltFile") == 0)
+	    {
+   		cout<<"introducer knows that a file has been deleted\n";
+	    }
+	    else if(strcmp(instruction, "GotTable") == 0)
+	    {
+ 		cout<<"Introducer knows that a table has been found\n";
+	    }
+	    else if(strcmp(instruction, "GotFile") == 0)
+	    {
+		cout<<"Introducer know that a file has been got\n";	
 	    }
     }
 }
@@ -74,7 +90,7 @@ int Introducer::addNewNode(int nodeID, int portNumber)
         addNode(nodeID,portNumber,NULL);
     }
     else{                               //begin initialization ring walk
-        char buf[255];
+        char buf[1024];
         strcpy(buf,"a,");
         strcat(buf,itoa(nodeID));
         strcat(buf,",");
@@ -170,7 +186,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 
         //send a message for adjustment walk
         //printf("introducer sending an initial adjustment message\n");
-        char message[256];
+        char message[1024];
         strcpy(message,"aadjust,");
         strcat(message,itoa(nodeID));
         strcat(message,",");

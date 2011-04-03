@@ -12,7 +12,7 @@ Node::Node(int nodeID, int portNumber, int m)
 	instanceof = NODE;
 	classLock = new sem_t;
 	strtokLock = new sem_t;
-    addNodeLock = new sem_t;
+    	addNodeLock = new sem_t;
 	sem_init(classLock, 0, 1);
 	sem_init(strtokLock, 0, 1);
 	sem_init(addNodeLock, 0, 1);
@@ -66,16 +66,17 @@ Node::~Node()
     }
 }
 
-
-int Node::hashFileMapKey(int fileID, char * fileName)
-{
-	return 0;
-}
-
 char * Node::findID(int fileID, char * message)
 {
 	bool doWork = false;
 	int socketToMessage;
+	//if I am the node
+	if(fileID == nodeID)
+	{
+		strcpy(message, "doWork");
+		message[6] = ',';
+		handle(message);	
+	}
 	//if successor node holds the token
 	if(inBetween(fileID, nodeID, fingerTable[0]->nodeID))
 	{
@@ -109,7 +110,7 @@ char * Node::findID(int fileID, char * message)
 
 bool Node::addNode(int nodeID, int portNumber,char * buf)
 {
-    char tmp[256];
+    char tmp[1024];
     strcpy(tmp,buf);    
 
     //build a vector out of the buf
@@ -178,15 +179,83 @@ void Node::addNodeAdjust(int nodeID, int portNumber, char * msg)
     s_send(fingerTable[0]->socket,msg);
 }
 
-bool Node::addFile(int fileID, char * fileName, char * ipAddress)
+bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message)
 {
 	printf("% adding file %i - %s with ip %s\n", nodeID, fileID, fileName, ipAddress);
-	return false;
+	char * contents;
+	if(fileMap.count(fileID) == 0)
+	{
+		contents = new char[1024];
+		contents[0] = 0;
+		fileMap[fileID] = contents;
+	}
+	contents = fileMap[fileID];
+	if(contents[0] != 0)
+		strcat(contents, ",");
+	strcat(contents, fileName);
+	strcat(contents, ",");
+	strcat(contents, ipAddress);
+	
+	strcpy(message, "findID,0,AddedFile,");
+	strcat(message, itoa(nodeID));
+	findID(0,message);	
+	return true;
 }
 
-bool Node::delFile(int fileID, char * fileName)
+bool Node::delFile(int fileID, char * fileName, char * message)
 {
-	return false;
+	strcpy(message, "findID,0,DeltFile,");
+	strcat(message, itoa(fileID));
+	strcat(message, fileName);
+	char * status = NULL;
+	char newContents[1024]; //this will store the new file contents if we delete a file
+	newContents[0] = 0;
+	if(fileMap.count(fileID) != 0)
+	{
+		char * contents = fileMap[fileID];
+		char * copy = new char[strlen(contents) + 1];
+		strcpy(copy, contents);
+	        grabLock(strtokLock);
+		//find the file to be deleted and save all those that don't
+		char * tempFileName = strtok(copy, ",");
+		char * ipAddress = strtok(NULL, ",");
+		while(tempFileName != NULL && strcmp(fileName, tempFileName) != 0)
+		{
+			if(newContents[0] != 0)
+				strcat(newContents,",");
+			strcat(newContents, tempFileName);
+			strcat(newContents, ",");
+			strcat(newContents, ipAddress);
+			tempFileName = strtok(NULL, ",");
+			ipAddress = strtok(NULL, ",");
+		}
+		//if file found continue saving other file contents
+		if(tempFileName != NULL)
+		{
+			strcpy(contents, newContents);
+			tempFileName = strtok(copy, ",");
+			ipAddress = strtok(NULL, ",");
+			while(tempFileName != NULL)
+			{
+				if(contents[0] != 0)
+					strcat(contents,",");
+				strcat(contents, tempFileName);
+				strcat(contents, ",");
+				strcat(contents, ipAddress);
+				tempFileName = strtok(NULL, ",");
+				ipAddress = strtok(NULL, ",");
+			}
+			status = "was deleted.\n";
+		}
+		
+		postLock(strtokLock);
+	}	
+	if(status = NULL)
+		status = "could not be found.\n";
+		
+	strcat(message, status);
+	findID(0, message);
+	return true;		
 }	
 void  Node::grabLock(sem_t * lock)
 {
@@ -200,27 +269,65 @@ void Node::postLock(sem_t * lock)
 	while(sem_post(lock) != 0)
 		cout<<"posting to the lock failed, trying again\n";
 }
-void Node::getTable()
-{}
+void Node::getTable(char * message)
+{
+	strcpy(message, "findID,0,GotTable,");
+	strcat(message, "FT,");
+	for(int i = 0; i < m; i++)
+	{
+		strcat(message, itoa(fingerTable[0]->nodeID));
+		strcat(message, ",");
+	}
+	strcat(message, "KY");
+	map<int,char *>::iterator it;
+	for ( it=fileMap.begin() ; it != fileMap.end(); it++ )
+    	{
+		strcat(message, ",");
+		strcat(message,itoa((*it).first));
+	}
+	findID(0, message);
+
+}
 void Node::quit(char * msg)
 {
-    instanceOf = DEAD;
+    instanceof = DEAD;
     s_send(fingerTable[0]->socket,msg);
 }
 
-void Node::getFileInfo(int fileID, char * fileName)
+void Node::getFileInfo(int fileID, char * fileName, char * message)
 {   
-
-    if(fileMap.count(fileID) > 0)
-    {
-        if(fileMap[fileID].count(fileName) > 0)
-    } 
-    ipAdress = filemap[fileID][fileName];
+	char * ipAddress = NULL;
+	char * tempFileName;
+    	if(fileMap.count(fileID) > 0)
+    	{
+        	char * contents = fileMap[fileID];
+		char * copy = new char[strlen(contents) + 1];
+		strcpy(copy, contents);
+		grabLock(strtokLock);
+		tempFileName = strtok(copy, ",");
+		ipAddress = strtok(NULL, ",");
+		while(tempFileName != NULL && strcmp(tempFileName, fileName) != 0)
+		{
+			tempFileName = strtok(NULL, ",");
+			ipAddress = strtok(NULL, ",");
+		} 
+		postLock(strtokLock);
+		delete copy;
+    	} 
+	if(ipAddress == NULL)
+		ipAddress = "error";	
+    
+	//construct message 
+	strcpy(message, "findID,0,GotFile,"); // message says find node 0, once there display following:
+	strcat(message, fileName); //fileName
+	strcat(message, ",");
+	strcat(message, ipAddress); //ipAddress or error
+	findID(0, message);
 }
 void Node::handle(char * buf)
 { 
     printf("%i handling %s\n",nodeID, buf);
-    char tmp[256];
+    char tmp[1024];
     strcpy(tmp,buf);
     grabLock(strtokLock);    
     char * pch = strtok(tmp,",");
@@ -256,23 +363,23 @@ void Node::handle(char * buf)
 	    postLock(strtokLock);
 	    if(strcmp(instruction, "addFile") == 0)
 	    {
-	    	addFile(fileID, fileName, ipAddress);
+	    	addFile(fileID, fileName, ipAddress, buf);
 	    }
 	    else if(strcmp(instruction, "delFile") == 0)
 	    {
-	    	delFile(fileID, fileName);	
+	    	delFile(fileID, fileName, buf);	
 	    }
 	    else if(strcmp(instruction, "getTabel") == 0)
 	    {
-	    	getTable();
+	    	getTable(buf);
 	    }
 	    else if(strcmp(instruction, "quit") == 0)
 	    {
-	    	quit();
+	    	quit(buf);
 	    }
-	    else if(strcmp(instruction, "findFile") == 0)
+	    else if(strcmp(instruction, "getFile") == 0)
 	    {
-	    	getFileInfo(fileID, fileName);
+	    	getFileInfo(fileID, fileName, buf);
 	    }
     }
 }
@@ -318,7 +425,7 @@ void * spawnNewReciever(void * information)
     int connectedSocket =info.newConnectedSocket;
 	node->postLock(node->classLock);
     char * c = new char[2];
-	char * buf = new char[256];
+	char * buf = new char[1024];
 	int i = 0;
 	while(s_recv(connectedSocket, c, 1))	
 	{

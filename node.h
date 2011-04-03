@@ -44,12 +44,6 @@ public:
 	/// set to node or introducer
 	volatile instance instanceof;
 
-	////////////////////////////////////////////////////
-	// Returns a unique hash kep based on the fileID 
-	// and fileName to be used for the fileMap
-	////////////////////////////////////////////////////
- 	int hashFileMapKey(int fileID, char * fileName);
-
 	///////////////////////////////////////////////////
 	// return the closest known finger the fileID
 	// or null if the fileID should belong to this node
@@ -90,17 +84,17 @@ public:
 	// add the file to its own system 
 	// or forward the message to the appropriate node
 	////////////////////////////////////////////////////
-	bool addFile(int fileID, char * fileName, char * ipAddress);
+	bool addFile(int fileID, char * fileName, char * ipAddress, char *buf);
 	
 	///////////////////////////////////////////////////
 	// deletes the file from its own system 
 	// or forwards the message to the appropriate node
 	//////////////////////////////////////////////////
-	bool delFile(int fileID, char * fileName);	
+	bool delFile(int fileID, char * fileName, char * buf);	
 
-	void getTable();
-	void quit(char *);
-	void getFileInfo(int fileID, char * fileName);
+	void getTable(char * buf);
+	void quit(char * buf);
+	void getFileInfo(int fileID, char * fileName, char * buf);
 	/////////////////////////////////////////////////
 	// Handles the command in buf after recieving message
 	///////////////////////////////////////////////
