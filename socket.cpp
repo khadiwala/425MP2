@@ -70,8 +70,12 @@ void connect(int sfd, int portNum)
     sinfo = new addrinfo();
     if(getaddrinfo(NULL,port,&hints,&sinfo) != 0)
         perror("failed to setup struct in new_socket");
-    if(connect(sfd,sinfo->ai_addr,sinfo->ai_addrlen) == -1)
+    while(connect(sfd,sinfo->ai_addr,sinfo->ai_addrlen) == -1)
+    {
+        printf("sock:%d,pn:%d\n",sfd,portNum);
         perror("failed to connect");
+        sleep(1);
+    }
     delete port;
 } 
 
@@ -106,6 +110,8 @@ void s_send(int sfd, char* buf)
 {
     if(send(sfd,buf,strlen(buf),0) == -1)
         perror("error writing to socket");
+    if(send(sfd,".",strlen("."),0) == -1)
+        perror("error writing . to socket");
 }
 
 ///converts the integer to its ascii representation

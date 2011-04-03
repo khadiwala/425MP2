@@ -67,6 +67,7 @@ void Introducer::handle(char * buf)
 }
 int Introducer::addNewNode(int nodeID, int portNumber)
 {
+    grabLock(addNodeLock);  //released when finished
     printf("adding node %d \n", nodeID);
     int i;
     if(fingerTable[0]->socket == -1){ //this is the first new node
@@ -101,6 +102,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         if(fingerTable[0]->socket == -1)
         {
             printf("first new node\n");
+            newNode->grabLock(classLock);
             for(int i = 0; i < m; i++){
                 if(nodeID + 1<<i > 1<<m)
                 {
@@ -112,6 +114,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
                     connect(newNode->fingerTable[i]->socket,this->portNumber);   // connect to introducer
                 }
             }
+            newNode->postLock(classLock);
         }
         else //this is not the first new node added
         {
@@ -129,18 +132,21 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
             }
             postLock(strtokLock);
             //construct finger table from message
+            newNode->grabLock(classLock);
             for(int i = 0; i < m; i++)
             {
                 newNode->fingerTable[i]->nodeID = FTdata[2 * i];
                 newNode->fingerTable[i]->socket = new_socket();
                 connect(newNode->fingerTable[i]->socket,FTdata[2*i + 1]);
-                printf("ft %d: %d\n",i,newNode->fingerTable[i]->nodeID);
+                printf("ft %d: port:%d, nodeid:%d\n",i,FTdata[2*i + 1],newNode->fingerTable[i]->nodeID);
             }
+            newNode->postLock(classLock);
         }     
 
         //spin
         while((*newNode).getInstance() != DEAD)
             sleep(1);
+        delete newNode;
     }
 
     else //parent
@@ -148,21 +154,22 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         sleep(2);//TODO: somehow wait until new node has been constructed in fork
 
         //adjust introducer table (must be done after fork)
+        grabLock(classLock);
         for(int i = 0; i < m; i++)
         {
             if(inBetween(nodeID,(this->nodeID + 1<<i),fingerTable[i]->nodeID))
             {
-                printf("introducer ft:%d is changing \n",i);
+                //printf("introducer ft:%d is changing \n",i);
                 close(fingerTable[i]->socket);
                 fingerTable[i]->nodeID = nodeID;
                 fingerTable[i]->socket = new_socket();
                 connect(fingerTable[i]->socket,portNumber);
             }
         }
+        postLock(classLock);
 
         //send a message for adjustment walk
-        printf("sending adjustment message\n");
-        printf("%d \n",fingerTable[0]->socket);
+        //printf("introducer sending an initial adjustment message\n");
         char message[256];
         strcpy(message,"aadjust,");
         strcat(message,itoa(nodeID));
@@ -176,6 +183,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 
 void Introducer::addNodeAdjust(int nodeID, int portNumber, char * buf){
     printf("introducer got m\n");
+    postLock(addNodeLock);
 }
 
 

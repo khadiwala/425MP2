@@ -14,7 +14,7 @@
 using namespace std;
 
 enum instance { NODE, INTRODUCER, DEAD };
-struct finger { int nodeID; int socket;};
+struct finger { volatile int nodeID; volatile int socket;};
 
 //////////////////////////////////////////////////
 // Creates a thread to listen to a connecting socket
@@ -33,16 +33,16 @@ class Node
 {
 //protected:
 public:
-    	int m;      ///> m for chord system
+    int m;      ///> m for chord system
 	int nodeID; ///> relative node id to the system
 	int portNumber; ///> listening port number
 	int listeningSocket; 
 
-	map<int, char *> fileMap;
+    map<int, char *> fileMap;
 
 	 
 	/// set to node or introducer
-	instance instanceof;
+	volatile instance instanceof;
 
 	////////////////////////////////////////////////////
 	// Returns a unique hash kep based on the fileID 
@@ -58,6 +58,8 @@ public:
 //public	
 	sem_t * classLock;
 	sem_t * strtokLock;
+    sem_t * addNodeLock;
+
 
 
 	//the finger table
@@ -97,7 +99,7 @@ public:
 	bool delFile(int fileID, char * fileName);	
 
 	void getTable();
-	void quit();
+	void quit(char *);
 	void getFileInfo(int fileID, char * fileName);
 	/////////////////////////////////////////////////
 	// Handles the command in buf after recieving message

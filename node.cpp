@@ -12,8 +12,10 @@ Node::Node(int nodeID, int portNumber, int m)
 	instanceof = NODE;
 	classLock = new sem_t;
 	strtokLock = new sem_t;
+    addNodeLock = new sem_t;
 	sem_init(classLock, 0, 1);
 	sem_init(strtokLock, 0, 1);
+	sem_init(addNodeLock, 0, 1);
 
 	/// set up socket
 	listeningSocket = new_socket();
@@ -38,25 +40,30 @@ Node::Node(int nodeID, int portNumber, int m)
 }
 Node::~Node()
 {
-	instanceof = DEAD;
-	close(listeningSocket);
-	pthread_t * oldThread;
-	sem_destroy(classLock);
-	sem_destroy(strtokLock);
-	while(!connectingThreads.empty())
-	{
-		oldThread = connectingThreads[connectingThreads.size()-1];
-		connectingThreads.pop_back();
-		pthread_cancel(*oldThread);
-		delete oldThread;
-	}
-	finger * oldFinger;
-	while(!fingerTable.empty())
-	{
-		oldFinger = fingerTable[fingerTable.size()-1];
-		fingerTable.pop_back();
-		delete oldFinger;
-	}
+    
+        printf("NODE:%d IS DEAD--------\n",this->nodeID);
+    if(instanceof == DEAD)
+    {
+    	instanceof = DEAD;
+    	close(listeningSocket);
+    	pthread_t * oldThread;
+    	sem_destroy(classLock);
+    	sem_destroy(strtokLock);
+    	while(!connectingThreads.empty())
+    	{
+    		oldThread = connectingThreads[connectingThreads.size()-1];
+    		connectingThreads.pop_back();
+    		pthread_cancel(*oldThread);
+    		delete oldThread;
+    	}
+    	finger * oldFinger;
+    	while(!fingerTable.empty())
+    	{
+    		oldFinger = fingerTable[fingerTable.size()-1];
+    		fingerTable.pop_back();
+    		delete oldFinger;
+    	}
+    }
 }
 
 
@@ -154,8 +161,21 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
 void Node::addNodeAdjust(int nodeID, int portNumber, char * msg)
 {
     printf("got an adjust message node:%d\n",this->nodeID);
+    grabLock(classLock);
+    for(int i = 0; i < m; i++)
+    {
+        //printf("index:%d,fing[i]-id: %d,fing[i]sock: %d\n",i,fingerTable[i]->nodeID,fingerTable[i]->socket,(this->nodeID + (1<<i)) % (1<<m));
+        if(inBetween(nodeID,(this->nodeID + (1<<i)) % (1<<m),fingerTable[i]->nodeID))
+        {
+            close(fingerTable[i]->socket);
+            fingerTable[i]->nodeID = nodeID;
+            fingerTable[i]->socket = new_socket();
+            connect(fingerTable[i]->socket,portNumber);
+        }
+    }
+    postLock(classLock);
+    printf("forwarding message to node:%d, corresponding socket: %d\n",fingerTable[0]->nodeID,fingerTable[0]->socket);
     s_send(fingerTable[0]->socket,msg);
-    
 }
 
 bool Node::addFile(int fileID, char * fileName, char * ipAddress)
@@ -182,10 +202,21 @@ void Node::postLock(sem_t * lock)
 }
 void Node::getTable()
 {}
-void Node::quit()
-{}
+void Node::quit(char * msg)
+{
+    instanceOf = DEAD;
+    s_send(fingerTable[0]->socket,msg);
+}
+
 void Node::getFileInfo(int fileID, char * fileName)
-{}
+{   
+
+    if(fileMap.count(fileID) > 0)
+    {
+        if(fileMap[fileID].count(fileName) > 0)
+    } 
+    ipAdress = filemap[fileID][fileName];
+}
 void Node::handle(char * buf)
 { 
     printf("%i handling %s\n",nodeID, buf);
@@ -257,22 +288,22 @@ instance Node::getInstance()
 
 void * acceptConnections(void * nodeClass)
 {
-	Node node =*(Node *)nodeClass;
+	Node * node = (Node *)nodeClass;
 	spawnNewRecieverInfo info;
-	info.node = &node;
+	info.node = node;
 	///start accepting connections
 	pthread_t * newThread;
 	int connectingSocket;
-	while(node.getInstance() != DEAD)
+	while(node->getInstance() != DEAD)
 	{
-		connectingSocket = accept(node.getListeningSock());
+		connectingSocket = accept(node->getListeningSock());
 		if(connectingSocket != -1)
 		{
 			///Creates new thread to listen on this connection
 			newThread = new pthread_t;
-			node.grabLock(node.classLock);///>will be released in thread
+			node->grabLock(node->classLock);///>will be released in thread
 			info.newConnectedSocket = connectingSocket;
-			node.connectingThreads.push_back(newThread);
+			node->connectingThreads.push_back(newThread);
 			pthread_create(newThread, NULL, 
 						spawnNewReciever, &info);
 		}
@@ -283,22 +314,25 @@ void * acceptConnections(void * nodeClass)
 void * spawnNewReciever(void * information)
 {
 	spawnNewRecieverInfo info =*((spawnNewRecieverInfo*)information);
-	Node node =*((Node*)(info.node));
-    Introducer intro = *((Introducer*)(info.node));
+	Node * node = (Node*)info.node;
     int connectedSocket =info.newConnectedSocket;
-	node.postLock(node.classLock);
+	node->postLock(node->classLock);
+    char * c = new char[2];
 	char * buf = new char[256];
-	
-	while(s_recv(connectedSocket, buf, 256))	
+	int i = 0;
+	while(s_recv(connectedSocket, c, 1))	
 	{
-        //HOMEBREW POLYMORPHISM FOR THE WIN
-        if(node.getInstance() == INTRODUCER)    
-            intro.handle(buf);
+        c[1] = 0;
+        if(strcmp(c,".") == 0)
+        {
+    	    node->handle(buf);
+            strcpy(buf,"");
+        }
         else
-    		node.handle(buf);
+            strcat(buf,c);
 	}
 	delete buf;
-	
+    node = NULL;
 	return NULL;
 }
 

@@ -3,7 +3,7 @@
 #include "introducer.h"
 #include "socket.h"
 
-#define INTROPORT 4325
+#define INTROPORT 5325
 using namespace std;
 
 int main()
@@ -25,9 +25,15 @@ int main()
         (*introducer).addNewNode(18,INTROPORT+1);  //test,normally this is called from handler
         sleep(1);
         (*introducer).addNewNode(10,INTROPORT+2);
+        sleep(1);
+        (*introducer).addNewNode(14,INTROPORT+3);
+        sleep(1);
+        (*introducer).addNewNode(5,INTROPORT+4);
+        sleep(1);
+        (*introducer).addNewNode(28,INTROPORT+5);
         sleep(100); //hack
     }    
-    sleep(1);
+    sleep(3);
     int lsock = new_socket();
     connect(lsock,INTROPORT);
     char c;
