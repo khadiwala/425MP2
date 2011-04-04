@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
     if(fork() == 0)
     {
         Introducer * introducer = new Introducer(0,INTROPORT,m);
-        sleep(100); //hack
+        sleep(1000); //hack
     }    
     
     sleep(2); //allow introducer to start
@@ -169,6 +169,6 @@ int main(int argc, char* argv[])
         printf("Input next command >> ");                 
         fgets(command,sizeof(command),stdin);
     }
-    sleep(100);
+    sleep(1000);
     return 0;
 }
