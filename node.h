@@ -11,6 +11,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define DEBUGPRINT if(true)
+#define DEBUGLOCK if(false)
 using namespace std;
 
 enum instance { NODE, INTRODUCER, DEAD };

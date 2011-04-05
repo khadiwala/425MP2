@@ -1,11 +1,10 @@
 #include "node.h"
 #include "introducer.h"
 
-#define DEBUGLOCK if(false)
 
 Node::Node(int nodeID, int portNumber, int m)
 {
-	printf("Constructing node %i \n", nodeID);
+	DEBUGPRINT printf("Constructing node %i \n", nodeID);
     	this->m = m;
 	this->nodeID = nodeID;
 	this->portNumber = portNumber;	
@@ -40,7 +39,7 @@ Node::Node(int nodeID, int portNumber, int m)
 }
 Node::~Node()
 {
-    printf("NODE:%d IS DEAD--------\n",this->nodeID);
+    DEBUGPRINT printf("NODE:%d IS DEAD--------\n",this->nodeID);
     if(instanceof == DEAD)
     {
     	instanceof = DEAD;
@@ -70,8 +69,9 @@ char * Node::findID(int fileID, char * message)
 	bool doWork = false;
 	int socketToMessage;
 	int i = 0;
-	//if I am the node
-	if(fileID == nodeID)
+	//if I am the node or I am the cheese
+	cout<<"FINGERTABLE->SOCKET[0] = "<<fingerTable[0]->socket<<endl;
+	if(fileID == nodeID || fingerTable[0]->socket == -1)
 	{
 		strcpy(message, "doWork");
 		message[6] = ',';
@@ -81,13 +81,13 @@ char * Node::findID(int fileID, char * message)
 	//if successor node holds the token
 	if(inBetween(fileID, nodeID, fingerTable[0]->nodeID))
 	{
-		cout<<nodeID<<" setting start of message to do work\n";
+		DEBUGPRINT cout<<nodeID<<" setting start of message to do work\n";
 		doWork = true;
 		socketToMessage = fingerTable[0]->socket;
 	}
 	else
 	{
-		cout<<nodeID<<" trying to find a node for file  "<<fileID<<endl;
+		DEBUGPRINT cout<<nodeID<<" trying to find a node for file  "<<fileID<<endl;
 		//finds the closest node ID we know about that comes before fileID
 		for(i = 0; i < fingerTable.size() - 1; i++)
 		{
@@ -103,12 +103,12 @@ char * Node::findID(int fileID, char * message)
 	}
 	if(doWork)
 	{
-		cout<<nodeID<<" found "<<fingerTable[0]->nodeID<<" to hold "<<fileID<<" message ";
-		printf(" %s\n", message);
+		DEBUGPRINT cout<<nodeID<<" found "<<fingerTable[0]->nodeID<<" to hold "<<fileID<<" message ";
+		DEBUGPRINT printf(" %s\n", message);
 		strcpy(message, "doWork");
 		message[6] = ',';		
 	}
-	printf("%i sending %i message %s\n", nodeID, fingerTable[i]->nodeID, message);
+	DEBUGPRINT printf("%i sending %i message %s\n", nodeID, fingerTable[i]->nodeID, message);
 	s_send(socketToMessage, message);
 	return NULL;
 }
@@ -156,7 +156,7 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
         strcat(tmp,",");
         strcat(tmp,itoa(newNodeFT[i]->socket));
     }
-    printf("%i sending %i message %s\n", this->nodeID, fingerTable[0]->nodeID, tmp);
+    DEBUGPRINT printf("%i sending %i message %s\n", this->nodeID, fingerTable[0]->nodeID, tmp);
     s_send(fingerTable[0]->socket,tmp);
 
     //TODO: delete vector
@@ -168,11 +168,11 @@ bool Node::addNode(int nodeID, int portNumber,char * buf)
 
 void Node::addNodeAdjust(int nodeID, int portNumber, char * msg)
 {
-    printf("got an adjust message node:%d\n",this->nodeID);
+    DEBUGPRINT printf("got an adjust message node:%d\n",this->nodeID);
     grabLock(classLock);
     for(int i = 0; i < m; i++)
     {
-        //printf("index:%d,fing[i]-id: %d,fing[i]sock: %d\n",i,fingerTable[i]->nodeID,fingerTable[i]->socket,(this->nodeID + (1<<i)) % (1<<m));
+        //DEBUGPRINT printf("index:%d,fing[i]-id: %d,fing[i]sock: %d\n",i,fingerTable[i]->nodeID,fingerTable[i]->socket,(this->nodeID + (1<<i)) % (1<<m));
         if(inBetween(nodeID,(this->nodeID + (1<<i)) % (1<<m),fingerTable[i]->nodeID))
         {
             close(fingerTable[i]->socket);
@@ -196,7 +196,7 @@ void Node::addNodeAdjust(int nodeID, int portNumber, char * msg)
                 strcat(buf,itoa(it->first));
                 strcat(buf,",");
                 strcat(buf,it->second);
-                //printf("node:%d sending %s \n",this->nodeID,buf);
+                //DEBUGPRINT printf("node:%d sending %s \n",this->nodeID,buf);
                 s_send(predSocket,buf);
                 close(predSocket);
             }
@@ -204,14 +204,14 @@ void Node::addNodeAdjust(int nodeID, int portNumber, char * msg)
         *succloc = 0;
     }        
     postLock(classLock);
-    printf("forwarding message to node:%d, corresponding socket: %d\n",fingerTable[0]->nodeID,fingerTable[0]->socket);
+    DEBUGPRINT printf("forwarding message to node:%d, corresponding socket: %d\n",fingerTable[0]->nodeID,fingerTable[0]->socket);
     if(this->nodeID == nodeID)
         strcat(msg,",succ");
     s_send(fingerTable[0]->socket,msg);
 }
 void Node::recieveFile(int fileID, char * buf)
 {
-    printf("recieved a file:%s\n",buf);
+    DEBUGPRINT printf("recieved a file:%s\n",buf);
     grabLock(classLock);
     fileMap[fileID] = buf;
     postLock(classLock);
@@ -221,7 +221,7 @@ void Node::recieveFile(int fileID, char * buf)
 
 
 bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message){
-	printf("%i adding file %i - %s with ip %s\n", nodeID, fileID, fileName, ipAddress);
+	DEBUGPRINT printf("%i adding file %i - %s with ip %s\n", nodeID, fileID, fileName, ipAddress);
 	char * contents;
 	if(fileMap.count(fileID) == 0)
 	{
@@ -238,7 +238,7 @@ bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message
 	
 	strcpy(message, "findID,0,AddedFile,");
 	strcat(message, itoa(nodeID));
-	cout<<nodeID<<" fileMap contents for fileID "<<fileID<<" is now "<<contents<<endl;
+	DEBUGPRINT cout<<nodeID<<" fileMap contents for fileID "<<fileID<<" is now "<<contents<<endl;
 	findID(0,message);	
 	
 	return true;
@@ -301,15 +301,15 @@ bool Node::delFile(int fileID, char * fileName, char * message)
 }	
 void  Node::grabLock(sem_t * lock)
 {
-	DEBUGLOCK printf("%i waiting for lock %p\n", nodeID, lock);
+	DEBUGLOCK DEBUGPRINT printf("%i waiting for lock %p\n", nodeID, lock);
 	while(sem_wait(lock) != -0)
-		cout<<"waiting on the lock failed, trying again\n";
+		DEBUGPRINT cout<<"waiting on the lock failed, trying again\n";
 }
 void Node::postLock(sem_t * lock)
 {
-	DEBUGLOCK printf("%i posting lock %p\n", nodeID, lock);
+	DEBUGLOCK DEBUGPRINT printf("%i posting lock %p\n", nodeID, lock);
 	while(sem_post(lock) != 0)
-		cout<<"posting to the lock failed, trying again\n";
+		DEBUGPRINT cout<<"posting to the lock failed, trying again\n";
 }
 void Node::getTable(char * message)
 {
@@ -368,14 +368,14 @@ void Node::getFileInfo(int fileID, char * fileName, char * message)
 }
 void Node::handle(char * buf)
 { 
-    printf("%i handling %s\n",nodeID, buf);
+    DEBUGPRINT printf("%i handling %s\n",nodeID, buf);
     char tmp[256];
     strcpy(tmp,buf);
     grabLock(strtokLock);    
     char * pch = strtok(tmp,",");
     if(strcmp(pch, "a") == 0) //add node
     {
-	    cout<<nodeID<<" got add node command\n";
+	    DEBUGPRINT cout<<nodeID<<" got add node command\n";
     	int nn = atoi(strtok(NULL,","));
    	    int nnpn = atoi(strtok(NULL,","));
 	    postLock(strtokLock);
@@ -432,7 +432,7 @@ void Node::handle(char * buf)
     }
     else
     {
-        printf("LOOK AT ME %s \n", buf);
+        DEBUGPRINT printf("LOOK AT ME %s \n", buf);
         postLock(strtokLock);
     }
 }
@@ -477,8 +477,9 @@ void * spawnNewReciever(void * information)
 	Node * node = (Node*)info.node;
     int connectedSocket =info.newConnectedSocket;
 	node->postLock(node->classLock);
-    char * c = new char[2];
+    	char * c = new char[2];
 	char * buf = new char[256];
+	buf[0] = 0;
 	int i = 0;
 	while(s_recv(connectedSocket, c, 1))	
 	{
@@ -524,7 +525,7 @@ void * spawnNewReciever(void * information)
     //    thisNodeID += 1<<m; 
     //for(int i = 0; i < m; i++)
     //{
-        //printf("%d,%d\n",thisNodeID, nodeID+(1<<i));
+        //DEBUGPRINT printf("%d,%d\n",thisNodeID, nodeID+(1<<i));
         //if(thisNodeID >= nodeID + (1<<i) && thisNodeID > newNodeFT[i]->nodeID)
         //{    
         //    newNodeFT[i]->nodeID = thisNodeID;

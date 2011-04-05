@@ -13,6 +13,14 @@ using namespace std;
 //global variables
 int portNumOffset;
 
+char * lowerToUpper(char * string, int size)
+{
+	int lowerToUpper = 'A' - 'a';
+	for(int i = 0; i < size + 1; i++)
+		if(string[i] >= 'a' && string[i] <= 'z')
+			string[i] += lowerToUpper;
+	return string;
+}
 int hashFileName(char * token,int m)
 {
     SHA1Context sha;
@@ -22,24 +30,37 @@ int hashFileName(char * token,int m)
     	fprintf(stderr, "could not hash\n");
     return sha.Message_Digest[4]%(1<<m);
 }
-
+void helpMenu()
+{
+	cout<<"ADD_NODE <nodeID>\n";
+	cout<<"ADD_FILE <filename> <contents>\n";
+	cout<<"DEL_FILE <filename>\n";
+	cout<<"FIND_FILE <filename>\n";
+	cout<<"GET_TABLE <nodeID>\n";
+	cout<<"SLEEP <# seconds>\n";
+	cout<<"QUIT\n";
+	cout<<"<file name with valid commands>\n";
+}
 //returns true if you should keep parsing
 bool parseSend(char * line,int sockfd,bool isFirst,int m)
 {
+    lowerToUpper(line, sizeof(line));
     bool ret = false;
     char * token = strtok(line," \n");
     if(strcmp(token,"ADD_FILE") == 0)
     {
-        token = strtok(NULL," \n"); //token = filename
-	    int fileID = hashFileName(token,m);
+        char * filename = strtok(NULL," \n"); //token = filename
+        char * ipAddress = strtok(NULL," \n");//token = ip address
+	if(filename == NULL || ipAddress == NULL)
+		{cout<<"invalid input, try ADD_FILE <filename> <ipaddress>\n";return 0;}
+	int fileID = hashFileName(filename,m);
         char commandmsg[256];
         strcpy(commandmsg,"findID,");   //findID,<fileID>,addFile,<filename>,<ip adress>
         strcat(commandmsg,itoa(fileID));
         strcat(commandmsg,",addFile,");
-        strcat(commandmsg,token);
+        strcat(commandmsg,filename);
         strcat(commandmsg,",");
-        token = strtok(NULL," \n");         //token = ip address
-        strcat(commandmsg,token);
+        strcat(commandmsg,ipAddress);
         printf("%s\n",commandmsg);
         ret = true;
 	    s_send(sockfd, commandmsg);
@@ -47,6 +68,7 @@ bool parseSend(char * line,int sockfd,bool isFirst,int m)
     else if(strcmp(token,"ADD_NODE") == 0)
     {
         char commandmsg[256];
+	//handles multiple node joins
         while((token = strtok(NULL," \n")) != NULL)
         {
             //sleep(1);
@@ -62,13 +84,13 @@ bool parseSend(char * line,int sockfd,bool isFirst,int m)
     }
     else if(strcmp(token,"GET_TABLE") == 0)
     {
-        token = strtok(NULL," \n"); //token = filename
-        int fileID = hashFileName(token,m);
+        char * nodeID = strtok(NULL," \n"); //token = filename
+	if(nodeID == NULL) 
+		{cout<<"Invalid input, try GET_TABLE <filename>\n"; return 0;}
         char commandmsg[256];
-        strcpy(commandmsg,"findID,");   //findID,<fileID>,getTable,<filename>
-        strcat(commandmsg,itoa(fileID));
-        strcat(commandmsg,",getTable,");
-        strcat(commandmsg,token); 
+        strcpy(commandmsg,"findID,");   //findID,<nodeID>,getTable
+        strcat(commandmsg,nodeID);
+        strcat(commandmsg,",getTable");
         printf("%s\n",commandmsg);
         s_send(sockfd,commandmsg);
         ret = true;
@@ -76,40 +98,47 @@ bool parseSend(char * line,int sockfd,bool isFirst,int m)
     else if(strcmp(token,"SLEEP") == 0)
     {
         token = strtok(NULL," \n");
+	if(token == NULL) {cout<<"Invalid input try SLEEP <# seconds>\n"; return 0;}
         sleep(atoi(token));
         ret = true;
     }
     else if(strcmp(token,"DEL_FILE") == 0)
     {
-        token = strtok(NULL," \n"); //token = filename
-	    int fileID = hashFileName(token,m);
+        char * filename = strtok(NULL," \n"); //token = filename
+	if(filename == NULL)
+	{  cout<<"Invalid input, try DEL_FILE <filename>\n"; return 0; }
+	int fileID = hashFileName(filename,m);
         char commandmsg[256];
         strcpy(commandmsg,"findID,");   //findID,<fileID>,delFile,<filename>
         strcat(commandmsg,itoa(fileID));
         strcat(commandmsg,",delFile,");
-        strcat(commandmsg,token);
+        strcat(commandmsg,filename);
         printf("%s\n",commandmsg);
         s_send(sockfd,commandmsg);
         ret = true;
     }
     else if(strcmp(token,"FIND_FILE") == 0)
     {
-        token = strtok(NULL," \n"); //token = filename
-	    int fileID = hashFileName(token,m);
+        char * filename = strtok(NULL," \n"); //token = filename
+	if(filename == NULL) 
+	{ cout<<"invalid input, try FIND_FILE <filename>\n"; return 0;}
+    	int fileID = hashFileName(filename,m);
         char commandmsg[256];
         strcpy(commandmsg,"findID,");   //findID,<fileID>,findFile,<filename>
         strcat(commandmsg,itoa(fileID));
         strcat(commandmsg,",findFile,");
-        strcat(commandmsg,token);
+        strcat(commandmsg,filename);
         printf("%s\n",commandmsg);
         s_send(sockfd,commandmsg);
         ret = true;
     }
     else if(strcmp(token,"QUIT") == 0)
     {
-        printf("Quit message not implemented\n");
-        exit(0);
+        s_send(sockfd, "quit");
+	exit(0);
     }
+    else if(strcmp(token, "HELP") == 0)
+	helpMenu();
     else if(isFirst)
     {
         FILE * f = fopen(token,"r");
@@ -141,15 +170,17 @@ bool parseSend(char * line,int sockfd,bool isFirst,int m)
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2){
-        cout<<"Invalid arguments"<<endl;
+    if (argc != 2 || (argv[1][0] < '5' && !(argv[1][0] == '1' && argv[1][1] == '0')) || argv[1][0] > '9'){
+        cout<<"first argument should be the number of nodes 5<=m<=10"<<endl;
         exit(1);
     }
     int m = atoi(argv[1]);
     if(fork() == 0)
     {
         Introducer * introducer = new Introducer(0,INTROPORT,m);
-        sleep(1000); //hack
+        while(introducer->instanceof != DEAD)
+		sleep(5);
+	//sleep(1000); //hack
     }    
     
     sleep(2); //allow introducer to start
@@ -163,8 +194,10 @@ int main(int argc, char* argv[])
     printf("input command or file name >> ");
     fgets(command,sizeof(command),stdin);
     bool isFirst = true;
-    while(parseSend(command,lsock,isFirst,m))
-    {    
+    cout<<"HELP -display help menu\n";
+    while(1)
+    {
+ 	parseSend(command,lsock,isFirst,m);
         isFirst = false;
         printf("Input next command >> ");                 
         fgets(command,sizeof(command),stdin);

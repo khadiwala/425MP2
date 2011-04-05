@@ -2,8 +2,7 @@
 
 Introducer::Introducer(int nodeId, int portNumber,int m) : Node(nodeId, portNumber, m)
 {
-	printf("constructing introducer\n");
-	instanceof = INTRODUCER;
+	DEBUGPRINT printf("constructing introducer\n");
 }
 
 void Introducer::handle(char * buf)
@@ -15,7 +14,7 @@ void Introducer::handle(char * buf)
     char * pch = strtok(tmp,",");
     if(strcmp(pch, "a") == 0) //add node
     {
-	cout<<nodeID<<" got add node command\n";
+	DEBUGPRINT cout<<nodeID<<" got add node command\n";
     	int nn = atoi(strtok(NULL,","));
    	int nnpn = atoi(strtok(NULL,","));
 	postLock(strtokLock);
@@ -45,9 +44,9 @@ void Introducer::handle(char * buf)
 	    postLock(strtokLock);
 	    if(strcmp(instruction, "addFile") == 0)
 	    {
-		cout<<"intro adding file\n";
+		DEBUGPRINT cout<<"intro adding file\n";
 	    	addFile(fileID, fileName, ipAddress, buf);
-		cout<<"done adding file\n";
+		DEBUGPRINT cout<<"done adding file\n";
 	    }
 	    else if(strcmp(instruction, "delFile") == 0)
 	    {
@@ -59,7 +58,8 @@ void Introducer::handle(char * buf)
 	    }
 	    else if(strcmp(instruction, "quit") == 0)
 	    {
-	    	quit(buf);
+		cout<<"All nodes exited, introducer quitting\n";
+	    	instanceof = DEAD;
 	    }
 	    else if(strcmp(instruction, "findFile") == 0)
 	    {
@@ -67,19 +67,19 @@ void Introducer::handle(char * buf)
 	    }
 	    else if(strcmp(instruction, "AddedFile") == 0)
 	    {
-		cout<<"introducer knows that a file has been added\n";
+		DEBUGPRINT cout<<"introducer knows that a file has been added\n";
 	    }
 	    else if(strcmp(instruction, "DeltFile") == 0)
 	    {
-   		cout<<"introducer knows that a file has been deleted\n";
+   		DEBUGPRINT cout<<"introducer knows that a file has been deleted\n";
 	    }
 	    else if(strcmp(instruction, "GotTable") == 0)
 	    {
- 		cout<<"Introducer knows that a table has been found\n";
+ 		DEBUGPRINT cout<<"Introducer knows that a table has been found\n";
 	    }
 	    else if(strcmp(instruction, "GotFile") == 0)
 	    {
-		cout<<"Introducer know that a file has been got\n";	
+		DEBUGPRINT cout<<"Introducer know that a file has been got\n";	
 	    }
     }
     else if(strcmp(pch,"addnew") == 0)
@@ -89,14 +89,19 @@ void Introducer::handle(char * buf)
         postLock(strtokLock);
         addNewNode(nn,nnpn, buf);
     }
+    else if(strcmp(pch,"quit") == 0)
+    {
+	s_send(fingerTable[0]->socket, "doWork,0,quit");
+    }
 }
 int Introducer::addNewNode(int nodeID, int portNumber, char * buf)
 {
     grabLock(addNodeLock);  //released when finished
-    printf("adding node %d \n", nodeID);
+    DEBUGPRINT printf("adding node %d \n", nodeID);
     int i;
-    if(fingerTable[0]->socket == -1){ //this is the first new node
-        addNode(nodeID,portNumber,NULL);
+    if(instanceof == NODE){ //this is the first new node	
+	addNode(nodeID,portNumber,NULL);
+	instanceof = INTRODUCER;
     }
     else{                               //begin initialization ring walk
         strcpy(buf,"a,");
@@ -120,12 +125,12 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
     //fork new node
     if(fork() == 0)
     {
-        printf("forking a new node: %d!\n",nodeID);
+        DEBUGPRINT printf("forking a new node: %d!\n",nodeID);
         Node * newNode = new Node(nodeID,portNumber,m);
         //if this is the first new node added...
-        if(fingerTable[0]->socket == -1)
+        if(buf == NULL)//fingerTable[0]->socket == -1)
         {
-            printf("first new node\n");
+            DEBUGPRINT printf("first new node\n");
             newNode->grabLock(classLock);
             for(int i = 0; i < m; i++){
                 if(nodeID + 1<<i > 1<<m)
@@ -142,7 +147,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         }
         else //this is not the first new node added
         {
-            printf("new nodes ft recieved: %s \n",buf);
+            DEBUGPRINT printf("new nodes ft recieved: %s \n",buf);
             vector<int> FTdata;
             grabLock(strtokLock);
             char * pch = strtok(buf,",");
@@ -162,7 +167,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
                 newNode->fingerTable[i]->nodeID = FTdata[2 * i];
                 newNode->fingerTable[i]->socket = new_socket();
                 connect(newNode->fingerTable[i]->socket,FTdata[2*i + 1]);
-                printf("ft %d: port:%d, nodeid:%d\n",i,FTdata[2*i + 1],newNode->fingerTable[i]->nodeID);
+                DEBUGPRINT printf("ft %d: port:%d, nodeid:%d\n",i,FTdata[2*i + 1],newNode->fingerTable[i]->nodeID);
             }
             newNode->postLock(classLock);
         }     
@@ -183,7 +188,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         {
             if(inBetween(nodeID,(this->nodeID + 1<<i),fingerTable[i]->nodeID))
             {
-                //printf("introducer ft:%d is changing \n",i);
+                //DEBUGPRINT printf("introducer ft:%d is changing \n",i);
                 close(fingerTable[i]->socket);
                 fingerTable[i]->nodeID = nodeID;
                 fingerTable[i]->socket = new_socket();
@@ -193,7 +198,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         postLock(classLock);
 
         //send a message for adjustment walk
-        //printf("introducer sending an initial adjustment message\n");
+        //DEBUGPRINT printf("introducer sending an initial adjustment message\n");
         char message[256];
         strcpy(message,"aadjust,");
         strcat(message,itoa(nodeID));
@@ -206,7 +211,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 }
 
 void Introducer::addNodeAdjust(int nodeID, int portNumber, char * msg){
-    printf("introducer got m\n");
+    DEBUGPRINT printf("introducer got m\n");
     postLock(addNodeLock);
     grabLock(classLock);
     char * succloc;
@@ -224,7 +229,7 @@ void Introducer::addNodeAdjust(int nodeID, int portNumber, char * msg){
                 strcat(buf,itoa(it->first));
                 strcat(buf,",");
                 strcat(buf,it->second);
-                //printf("node:%d sending %s \n",this->nodeID,buf);
+                //DEBUGPRINT printf("node:%d sending %s \n",this->nodeID,buf);
                 s_send(predSocket,buf);
                 close(predSocket);
             }
