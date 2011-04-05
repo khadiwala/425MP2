@@ -3,6 +3,8 @@
 Introducer::Introducer(int nodeId, int portNumber,int m) : Node(nodeId, portNumber, m)
 {
 	DEBUGPRINT printf("constructing introducer\n");
+	listenerSocket = new_socket();
+	connect(listenerSocket, portNumber - 1);
 }
 
 void Introducer::handle(char * buf)
@@ -67,19 +69,24 @@ void Introducer::handle(char * buf)
 	    }
 	    else if(strcmp(instruction, "AddedFile") == 0)
 	    {
-		DEBUGPRINT cout<<"introducer knows that a file has been added\n";
+		char * nodeID = strtok(NULL, ",");
+ 		char * filename = strtok(NULL, ",");
+		strcpy(buf, filename);
+		strcat(buf, " successfully added to node");
+		strcat(buf, nodeID);
+		s_send(listenerSocket, buf);
 	    }
 	    else if(strcmp(instruction, "DeltFile") == 0)
 	    {
-   		DEBUGPRINT cout<<"introducer knows that a file has been deleted\n";
+   		s_send(listenerSocket, "introducer knows that a file has been deleted\n");
 	    }
 	    else if(strcmp(instruction, "GotTable") == 0)
 	    {
- 		DEBUGPRINT cout<<"Introducer knows that a table has been found\n";
+ 		s_send(listenerSocket, "Introducer knows that a table has been found\n");
 	    }
 	    else if(strcmp(instruction, "GotFile") == 0)
 	    {
-		DEBUGPRINT cout<<"Introducer know that a file has been got\n";	
+		s_send(listenerSocket, "Introducer know that a file has been got\n");	
 	    }
     }
     else if(strcmp(pch,"addnew") == 0)
@@ -211,7 +218,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 }
 
 void Introducer::addNodeAdjust(int nodeID, int portNumber, char * msg){
-    DEBUGPRINT printf("introducer got m\n");
+    s_send(listenerSocket, "introducer got m");
     postLock(addNodeLock);
     grabLock(classLock);
     char * succloc;

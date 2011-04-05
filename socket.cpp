@@ -72,8 +72,8 @@ void connect(int sfd, int portNum)
         perror("failed to setup struct in new_socket");
     while(connect(sfd,sinfo->ai_addr,sinfo->ai_addrlen) == -1)
     {
-        printf("sock:%d,pn:%d\n",sfd,portNum);
-        perror("failed to connect");
+       // printf("sock:%d,pn:%d\n",sfd,portNum);
+       // perror("failed to connect");
         sleep(1);
     }
     delete port;

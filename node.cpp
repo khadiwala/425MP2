@@ -238,6 +238,8 @@ bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message
 	
 	strcpy(message, "findID,0,AddedFile,");
 	strcat(message, itoa(nodeID));
+        strcat(message, ",");
+        strcat(message, fileName);
 	DEBUGPRINT cout<<nodeID<<" fileMap contents for fileID "<<fileID<<" is now "<<contents<<endl;
 	findID(0,message);	
 	
@@ -317,7 +319,7 @@ void Node::getTable(char * message)
 	strcat(message, "FT,");
 	for(int i = 0; i < m; i++)
 	{
-		strcat(message, itoa(fingerTable[0]->nodeID));
+		strcat(message, itoa(fingerTable[i]->nodeID));
 		strcat(message, ",");
 	}
 	strcat(message, "KY");
@@ -417,7 +419,7 @@ void Node::handle(char * buf)
 	    {
 	    	delFile(fileID, fileName, buf);	
 	    }
-	    else if(strcmp(instruction, "getTabel") == 0)
+	    else if(strcmp(instruction, "getTale") == 0)
 	    {
 	    	getTable(buf);
 	    }
@@ -492,6 +494,7 @@ void * spawnNewReciever(void * information)
         	else
             		strcat(buf,c);
 	}
+	delete c;
 	delete buf;
     	node = NULL;
 	return NULL;
