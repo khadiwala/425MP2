@@ -419,7 +419,7 @@ void Node::handle(char * buf)
 	    {
 	    	delFile(fileID, fileName, buf);	
 	    }
-	    else if(strcmp(instruction, "getTale") == 0)
+	    else if(strcmp(instruction, "getTable") == 0)
 	    {
 	    	getTable(buf);
 	    }

@@ -54,7 +54,7 @@ void Introducer::handle(char * buf)
 	    {
 	    	delFile(fileID, fileName, buf);	
 	    }
-	    else if(strcmp(instruction, "getTabel") == 0)
+	    else if(strcmp(instruction, "getTable") == 0)
 	    {
 	    	getTable(buf);
 	    }
@@ -140,7 +140,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
             DEBUGPRINT printf("first new node\n");
             newNode->grabLock(classLock);
             for(int i = 0; i < m; i++){
-                if(nodeID + 1<<i > 1<<m)
+                if(nodeID + (1<<i) > 1<<m)
                 {
                     newNode->fingerTable[i]->nodeID = newNode->nodeID;
                 }
@@ -193,7 +193,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
         grabLock(classLock);
         for(int i = 0; i < m; i++)
         {
-            if(inBetween(nodeID,(this->nodeID + 1<<i),fingerTable[i]->nodeID))
+            if(inBetween(nodeID,(this->nodeID + (1<<i)),fingerTable[i]->nodeID))
             {
                 //DEBUGPRINT printf("introducer ft:%d is changing \n",i);
                 close(fingerTable[i]->socket);
