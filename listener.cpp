@@ -137,6 +137,7 @@ bool parseSend(char * line, int sockfd, bool isFirst, int m) {
 		cout<<"quitting in 10 seconds\n";
 		sleep(10);
 		close(sockfd);
+        printf("total number of messages sent: %d\n",getMessageCount());
 		exit(1);
 
 	} else if (strcmp(token, "HELP") == 0)
@@ -183,6 +184,7 @@ int main(int argc, char* argv[]) {
 		//sleep(1000); //hack
 	}
 	cout << "listener started with " << m << " nodes" << endl;
+    resetCount();
 	int lsock = new_socket();
 	portNumOffset = 1;
 

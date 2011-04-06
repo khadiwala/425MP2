@@ -43,6 +43,16 @@ void Introducer::handle(char * buf) {
 		DEBUGPRINT cout<<nodeID<<" got add node command\n";
 		int nn = atoi(strtok(NULL, ","));
 		int nnpn = atoi(strtok(NULL, ","));
+        printf("New node finger table for %d:\n",nn);
+        int i = 0;
+        pch = strtok(NULL,",");
+        while(pch != NULL)
+        {
+            printf("ft[%d]: %s\n",i,pch);
+            pch = strtok(NULL,",");
+            pch = strtok(NULL,","); //ignore port numbers
+            i++;
+        }
 		postLock(strtokLock);
 		addNode(nn, nnpn, buf);
 		return;
@@ -103,10 +113,10 @@ void Introducer::handle(char * buf) {
 			while(strcmp(key, "KY") != 0)
 			{
 				printf("%i  -  %s\n", i, key);
-				key = strtok(NULL, ",");
-				printf("%s, \n",key);
+				key = strtok(NULL, ",");				
 				i++;
 			}
+            
 			key = strtok(NULL, ",");
 			if(key != NULL)
 				printf("keys: \n");
@@ -114,7 +124,7 @@ void Introducer::handle(char * buf) {
 				printf("No keys stored\n");
 			while(key != NULL)
 			{
-				printf("%s ", key);
+				printf("%s\n ", key);
 				key = strtok(NULL, ",");
 			}
 
@@ -159,6 +169,13 @@ int Introducer::addNewNode(int nodeID, int portNumber, char * buf) {
 	int i;
 	if (instanceof == NODE) { //this is the first new node
 		addNode(nodeID, portNumber, NULL);
+        //print new node finger table: special case:
+        printf("New node finger table for %d\n",nodeID);
+		for (int i = 0; i < m; i++) {
+			if (nodeID + (1 << i) > (1 << m)) 
+                printf("ft[%d]: %d\n",i,nodeID);
+            else printf("ft[%d]: %d\n",i,this->nodeID);
+        }
 		instanceof = INTRODUCER;
 	} else { //begin initialization ring walk
 		strcpy(buf, "a,");

@@ -112,6 +112,28 @@ void s_send(int sfd, char* buf)
         perror("error writing to socket");
     if(send(sfd,"+",strlen("+"),0) == -1)
         perror("error writing . to socket");
+    FILE * f = fopen("messages_sent.txt","a");
+    fputc('s',f);
+    fputc('\n',f);
+    fclose(f);
+}
+
+int getMessageCount()
+{
+    FILE * f = fopen("messages_sent.txt","r");
+    char * temp = new char[256];
+    int count = 0;
+    while(fgets(temp,256,f) != NULL)
+        count++;
+    fclose(f);
+    delete temp;
+    return count;     
+}
+
+void resetCount()
+{
+    FILE * f = fopen("messages_sent.txt","w");
+    fclose(f);
 }
 
 ///converts the integer to its ascii representation
