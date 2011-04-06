@@ -108,10 +108,12 @@ bool s_recv(int sfd, char * buf, int sizeOfBuf)
 /* writes strlen(buf) characters from buf into socket*/
 void s_send(int sfd, char* buf)
 {
+    cout<<"sending\n";
     if(send(sfd,buf,strlen(buf),0) == -1)
         perror("error writing to socket");
     if(send(sfd,"+",strlen("+"),0) == -1)
         perror("error writing . to socket");
+    cout<<"done sending\n";
 }
 
 ///converts the integer to its ascii representation

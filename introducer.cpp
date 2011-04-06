@@ -28,6 +28,7 @@ void Introducer::handle(char * buf)
         int nn = atoi(strtok(NULL,","));
         int nnpn = atoi(strtok(NULL,","));
         postLock(strtokLock);
+	cout<<"about to addNodeAdjust\n";
         addNodeAdjust(nn,nnpn,buf);
     }
     else if(strcmp(pch, "findID") == 0)
@@ -74,6 +75,7 @@ void Introducer::handle(char * buf)
 		strcpy(buf, filename);
 		strcat(buf, " successfully added to node");
 		strcat(buf, nodeID);
+		cout<<"%s getting sent to reciever\n";
 		s_send(listenerSocket, buf);
 	    }
 	    else if(strcmp(instruction, "DeltFile") == 0)
@@ -181,7 +183,7 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
 
         //spin
         while((*newNode).getInstance() != DEAD)
-            sleep(1);
+            sleep(5);
         delete newNode;
     }
 
@@ -217,33 +219,45 @@ bool Introducer::addNode(int nodeID, int portNumber, char * buf){
     return true;
 }
 
-void Introducer::addNodeAdjust(int nodeID, int portNumber, char * msg){
-    s_send(listenerSocket, "introducer got m");
+void Introducer::addNodeAdjust(int nodeID, int portNumber, char * msg){  
+    cout<<"Intro adding node "<<nodeID<<endl;
     postLock(addNodeLock);
     grabLock(classLock);
     char * succloc;
+    int predSocket = -1;
+    cout<<"IF\n";
+    char buf[256];
     if((succloc = strstr(msg,",succ")) != NULL)
     {
         map<int,char*>::iterator it;
+	cout<<"FOR\n";
         for(it = fileMap.begin(); it != fileMap.end(); it++)
         {
             if(inBetween(nodeID,it->first,this->nodeID))
             {
-                int predSocket = new_socket();
-                connect(predSocket,portNumber);
-                char buf[256];
+		if(predSocket == -1)
+                {
+			predSocket = new_socket();
+                	connect(predSocket,portNumber);
+		}
                 strcpy(buf,"recieve,");
                 strcat(buf,itoa(it->first));
                 strcat(buf,",");
                 strcat(buf,it->second);
                 //DEBUGPRINT printf("node:%d sending %s \n",this->nodeID,buf);
                 s_send(predSocket,buf);
-                close(predSocket);
             }
         }
         *succloc = 0;
     }        
-    postLock(classLock);
-}
+   postLock(classLock);
+   cout<<"done posting class lock about to send on "<<listeningSocket<<"\n";
+    strcpy(buf, "Node added");
+    s_send(listeningSocket, buf );
+    cout<<"done sending\n";
+    if(predSocket != -1) 
+	close(predSocket);
+    cout<<"DONE\n";
+ }
 
 

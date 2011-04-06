@@ -14,22 +14,23 @@ using namespace std;
 int portNumOffset;
 int connectedSocket;
 void recieveMessage()
-{/*
+{
 	char message[256];
 	char character[2];
 	message[0] = 0;
-        while(s_recv(connectedSocket, character, 1))
+	character[0] = 0;
+	cout<<"Listener waiting for response\n";
+        do
         {
+		strcat(message,character);
+		cout<<"Getting a character from socket "<<connectedSocket<<"\n";
+		s_recv(connectedSocket, character, 1);
+		printf("%c",character[0]);
                	character[1] = 0;
-               	if(strcmp(character,"+") == 0)
-		{
-                     	printf("\n%s\n", message);
-			break;
-		}
-               
-               	else
-        	        strcat(message,character);
-	}*/
+	}
+	while(strcmp(character,"+") != 0);
+	printf("/n%s/n", message);
+	cout<<"Listener got response\n";
 }
 char * lowerToUpper(char * string, int size)
 {
@@ -209,6 +210,7 @@ int main(int argc, char* argv[])
     bind(listeningSocket, INTROPORT-1);
     listen(listeningSocket);
     connectedSocket = accept(listeningSocket);
+    
     //set up socket to send things to introducer
     int lsock = new_socket();
     connect(lsock,INTROPORT);
