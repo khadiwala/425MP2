@@ -7,7 +7,7 @@ class Introducer : public Node
 {
 public:
 	Introducer(int nodeID, int portNumber, int m);
-	
+	~Introducer();	
 	/**
 	* Should fork a new process for the new node.	
 	*/

@@ -4,6 +4,33 @@ Introducer::Introducer(int nodeId, int portNumber, int m) :
 	Node(nodeId, portNumber, m) {
 	DEBUGPRINT printf("constructing introducer\n");
 }
+Introducer::~Introducer()
+{
+    DEBUGPRINT printf("NODE:%d IS DEAD--------\n",this->nodeID);
+    instanceof = DEAD;
+    close(listeningSocket);
+    pthread_t * oldThread;
+    sem_destroy(classLock);
+    sem_destroy(strtokLock);
+    while(!connectingThreads.empty())
+    {
+    	oldThread = connectingThreads[connectingThreads.size()-1];
+    	connectingThreads.pop_back();
+    	pthread_cancel(*oldThread);
+    	delete oldThread;
+    }
+    finger * oldFinger;
+    while(!fingerTable.empty())
+    {
+    	oldFinger = fingerTable[fingerTable.size()-1];
+    	fingerTable.pop_back();
+	close(oldFinger->socket);
+    	delete oldFinger;
+    }
+}
+
+
+
 
 void Introducer::handle(char * buf) {
 	printf("introducer handling %s\n", buf);
@@ -66,10 +93,7 @@ void Introducer::handle(char * buf) {
 		else if(strcmp(instruction, "DeltFile") == 0)
 		{
 			DEBUGPRINT cout<<"introducer knows that a file has been deleted\n";
-			if(strcmp(ipAddress, "error") == 0)
-				printf("Error - %s could not be found in the system\n", fileName);
-			else
-				printf("%s containing %s has been deleted\n", fileName, ipAddress);	
+			printf("%s %s\n", fileName, ipAddress);	
 		}
 		else if(strcmp(instruction, "GotTable") == 0)
 		{
@@ -84,10 +108,13 @@ void Introducer::handle(char * buf) {
 				i++;
 			}
 			key = strtok(NULL, ",");
-			cout<<"Keys: ";
+			if(key != NULL)
+				printf("keys: \n");
+			else 
+				printf("No keys stored\n");
 			while(key != NULL)
 			{
-				printf("%s, ", key);
+				printf("%s ", key);
 				key = strtok(NULL, ",");
 			}
 
@@ -95,7 +122,6 @@ void Introducer::handle(char * buf) {
 		}
 		else if(strcmp(instruction, "GotFile") == 0)
 		{
-			cout<<"Got file"<<endl;
 			if(strcmp(ipAddress, "error") == 0)
 				printf("Error %s could not be found in the system\n", fileName);
 			else
@@ -103,8 +129,7 @@ void Introducer::handle(char * buf) {
 				char * ffileID = strtok(NULL, ",");
 				char * nnodeID = strtok(NULL, ",");
 				if(ffileID == NULL || nnodeID == NULL) cout<<"What?\n";
-				printf("%s (%s) has been stored at node %s. It contains i.p. %s",
-					fileName, ffileID, nnodeID, ipAddress);
+				printf("%s - fileID %s has been stored at node %s. It contains i.p. %s\n"					,fileName, ffileID, nnodeID, ipAddress);
 			}
 			postLock(strtokLock);
 		}
@@ -120,7 +145,9 @@ void Introducer::handle(char * buf) {
 	{	
 		char message[21] = "doWork,0,quit";
 		if(instanceof == INTRODUCER)
+		{
 			s_send(fingerTable[0]->socket, message);
+		}
 		else handle(message);
 	}
 }

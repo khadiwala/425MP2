@@ -248,8 +248,6 @@ bool Node::addFile(int fileID, char * fileName, char * ipAddress, char * message
 bool Node::delFile(int fileID, char * fileName, char * message)
 {
 	strcpy(message, "findID,0,DeltFile,");
-	strcat(message, itoa(fileID));
-	strcat(message, ",");
 	strcat(message, fileName);
 	char * status = NULL;
 	char newContents[256]; //this will store the new file contents if we delete a file

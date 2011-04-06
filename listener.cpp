@@ -113,7 +113,7 @@ bool parseSend(char * line, int sockfd, bool isFirst, int m) {
 		strcat(commandmsg, itoa(fileID));
 		strcat(commandmsg, ",delFile,");
 		strcat(commandmsg, filename);
-		printf("%s\n", commandmsg);
+		printf("Trying to delete filename %s - fileID %i\n", filename, fileID);
 		s_send(sockfd, commandmsg);
 		ret = true;
 	} else if (strcmp(token, "FIND_FILE") == 0) {
@@ -134,7 +134,9 @@ bool parseSend(char * line, int sockfd, bool isFirst, int m) {
 	} else if (strcmp(token, "QUIT") == 0) {
 		s_send(sockfd, "quit");
 		fflush( stdin);
-		printf("GoodBye\n");
+		cout<<"quitting in 10 seconds\n";
+		sleep(10);
+		close(sockfd);
 		exit(1);
 
 	} else if (strcmp(token, "HELP") == 0)
@@ -172,7 +174,7 @@ int main(int argc, char* argv[]) {
 		Introducer * introducer = new Introducer(0, INTROPORT, m);
 		while (introducer->instanceof != DEAD)
 		{
-			sleep(3);
+			sleep(2);
 			fflush( stdin);
 		}
 		delete introducer;
