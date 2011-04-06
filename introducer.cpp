@@ -6,7 +6,7 @@ Introducer::Introducer(int nodeId, int portNumber, int m) :
 }
 
 void Introducer::handle(char * buf) {
-	DEBUGPRINT printf("introducer handling %s\n", buf);
+	printf("introducer handling %s\n", buf);
 	char tmp[256];
 	strcpy(tmp, buf);
 	grabLock( strtokLock);
@@ -34,7 +34,8 @@ void Introducer::handle(char * buf) {
 		char * instruction = strtok(NULL, ","); //should be the instruction
 		char * fileName = strtok(NULL, ","); //could be fileName or NULL
 		char * ipAddress = strtok(NULL, ","); //could be ip or NULL
-		postLock(strtokLock);
+		if(strcmp(instruction, "GotTable") != 0 && strcmp(instruction, "GotFile") != 0)
+			postLock(strtokLock);
 		if (strcmp(instruction, "addFile") == 0) {
 			addFile(fileID, fileName, ipAddress, buf);
 		}
@@ -58,18 +59,54 @@ void Introducer::handle(char * buf) {
 		else if(strcmp(instruction, "AddedFile") == 0)
 		{
 			DEBUGPRINT cout<<"introducer knows that a file has been added\n";
+			printf("%s stored at node %s\n", ipAddress, fileName);
+			//note ipAddress should actually be the file name and file name should actually be
+			// the nodeID
 		}
 		else if(strcmp(instruction, "DeltFile") == 0)
 		{
 			DEBUGPRINT cout<<"introducer knows that a file has been deleted\n";
+			if(strcmp(ipAddress, "error") == 0)
+				printf("Error - %s could not be found in the system\n", fileName);
+			else
+				printf("%s containing %s has been deleted\n", fileName, ipAddress);	
 		}
 		else if(strcmp(instruction, "GotTable") == 0)
 		{
-			DEBUGPRINT cout<<"Introducer knows that a table has been found\n";
+			printf("Finger Table for %s:\n",fileName); //actually nodeID
+			char * key = strtok(NULL, ",");
+			int i = 0;
+			while(strcmp(key, "KY") != 0)
+			{
+				printf("%i  -  %s\n", i, key);
+				key = strtok(NULL, ",");
+				printf("%s, \n",key);
+				i++;
+			}
+			key = strtok(NULL, ",");
+			cout<<"Keys: ";
+			while(key != NULL)
+			{
+				printf("%s, ", key);
+				key = strtok(NULL, ",");
+			}
+
+			postLock(strtokLock);
 		}
 		else if(strcmp(instruction, "GotFile") == 0)
 		{
-			DEBUGPRINT cout<<"Introducer know that a file has been got\n";
+			cout<<"Got file"<<endl;
+			if(strcmp(ipAddress, "error") == 0)
+				printf("Error %s could not be found in the system\n", fileName);
+			else
+			{
+				char * ffileID = strtok(NULL, ",");
+				char * nnodeID = strtok(NULL, ",");
+				if(ffileID == NULL || nnodeID == NULL) cout<<"What?\n";
+				printf("%s (%s) has been stored at node %s. It contains i.p. %s",
+					fileName, ffileID, nnodeID, ipAddress);
+			}
+			postLock(strtokLock);
 		}
 	}
 	else if(strcmp(pch,"addnew") == 0)

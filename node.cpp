@@ -316,7 +316,8 @@ void Node::postLock(sem_t * lock)
 void Node::getTable(char * message)
 {
 	strcpy(message, "findID,0,GotTable,");
-	strcat(message, "FT,");
+	strcat(message, itoa(nodeID));
+	strcat(message, ",FT,");
 	for(int i = 0; i < m; i++)
 	{
 		strcat(message, itoa(fingerTable[i]->nodeID));
@@ -341,8 +342,9 @@ void Node::quit(char * msg)
 
 void Node::getFileInfo(int fileID, char * fileName, char * message)
 {   
-	char * ipAddress = NULL;
+	char * tempipAddress = NULL; 
 	char * tempFileName;
+	char ipAddress[256]; ipAddress[0] = 0;
     	if(fileMap.count(fileID) > 0)
     	{
         	char * contents = fileMap[fileID];
@@ -350,23 +352,33 @@ void Node::getFileInfo(int fileID, char * fileName, char * message)
 		strcpy(copy, contents);
 		grabLock(strtokLock);
 		tempFileName = strtok(copy, ",");
-		ipAddress = strtok(NULL, ",");
-		while(tempFileName != NULL && strcmp(tempFileName, fileName) != 0)
+		tempipAddress = strtok(NULL, ",");
+		while(1)
 		{
+			if(tempFileName == NULL || strcmp(tempFileName, fileName) == 0)
+				break; 
 			tempFileName = strtok(NULL, ",");
-			ipAddress = strtok(NULL, ",");
-		} 
+			tempipAddress = strtok(NULL, ",");
+		}
+		if(ipAddress == NULL)
+			strcpy(ipAddress, "error");
+		else
+			strcpy(ipAddress, tempipAddress);			
+
 		postLock(strtokLock);
 		delete copy;
     	} 
-	if(ipAddress == NULL)
-		ipAddress = "error";	
+		
     
 	//construct message 
 	strcpy(message, "findID,0,GotFile,"); // message says find node 0, once there display following:
 	strcat(message, fileName); //fileName
 	strcat(message, ",");
 	strcat(message, ipAddress); //ipAddress or error
+	strcat(message, ",");
+	strcat(message, itoa(fileID));
+	strcat(message, ",");
+	strcat(message, itoa(nodeID));
 	findID(0, message);
 }
 void Node::handle(char * buf)

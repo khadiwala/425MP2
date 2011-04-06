@@ -8,7 +8,7 @@
 #include "mp2_sha1-c/sha1.h"
 #include <math.h>
 
-#define INTROPORT 5647
+#define INTROPORT 5647 
 using namespace std;
 //global variables
 int portNumOffset;
@@ -40,11 +40,6 @@ void helpMenu() {
 }
 //returns true if you should keep parsing
 bool parseSend(char * line, int sockfd, bool isFirst, int m) {
-	char * originalCase = new char[256];
-	strcpy(originalCase, line);
-	//strip new line
-	originalCase = strtok(originalCase, "\n");
-
 	lowerToUpper(line, sizeof(line));
 	bool ret = false;
 	char * token = strtok(line, " \n");
@@ -133,15 +128,15 @@ bool parseSend(char * line, int sockfd, bool isFirst, int m) {
 		ret = true;
 	} else if (strcmp(token, "QUIT") == 0) {
 		s_send(sockfd, "quit");
-		fflush( stdin);
+		sleep(5);
+		fflush(stdin);
 		printf("GoodBye\n");
 		exit(1);
-
+		
 	} else if (strcmp(token, "HELP") == 0)
 		helpMenu();
 	else if (isFirst) {
-		printf("%s\n", originalCase);
-		FILE * f = fopen(originalCase, "r");
+		FILE * f = fopen(token, "r");
 		char command[256];
 		if (f == NULL) {
 			printf("Not a valid command or file name, try again >> ");
@@ -171,10 +166,7 @@ int main(int argc, char* argv[]) {
 	if (fork() == 0) {
 		Introducer * introducer = new Introducer(0, INTROPORT, m);
 		while (introducer->instanceof != DEAD)
-		{
 			sleep(3);
-			fflush( stdin);
-		}
 		delete introducer;
 		printf("Good bye.\n");
 		exit(1);
@@ -191,8 +183,7 @@ int main(int argc, char* argv[]) {
 	bool isFirst = true;
 	cout << "HELP -display help menu\n";
 	while (1) {
-		if(command[0] != 0  && strcmp(command, "\n") != 0)
-			parseSend(command, lsock, isFirst, m);
+		parseSend(command, lsock, isFirst, m);
 		isFirst = false;
 		printf("Input next command >> ");
 		fgets(command, sizeof(command), stdin);
