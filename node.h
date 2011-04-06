@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define DEBUGPRINT if(true)
+#define DEBUGPRINT if(false)
 #define DEBUGLOCK if(false)
 using namespace std;
 

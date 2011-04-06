@@ -26,7 +26,6 @@ public:
     void handle(char * buf);
 private:
     char * FTstring;    //stores the resulting string of the add procedure
-    int listenerSocket;
 };
 
 

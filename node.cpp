@@ -70,7 +70,6 @@ char * Node::findID(int fileID, char * message)
 	int socketToMessage;
 	int i = 0;
 	//if I am the node or I am the cheese
-	cout<<"FINGERTABLE->SOCKET[0] = "<<fingerTable[0]->socket<<endl;
 	if(fileID == nodeID || fingerTable[0]->socket == -1)
 	{
 		strcpy(message, "doWork");
@@ -250,6 +249,7 @@ bool Node::delFile(int fileID, char * fileName, char * message)
 {
 	strcpy(message, "findID,0,DeltFile,");
 	strcat(message, itoa(fileID));
+	strcat(message, ",");
 	strcat(message, fileName);
 	char * status = NULL;
 	char newContents[256]; //this will store the new file contents if we delete a file
@@ -277,7 +277,7 @@ bool Node::delFile(int fileID, char * fileName, char * message)
 		if(tempFileName != NULL)
 		{
 			strcpy(contents, newContents);
-			tempFileName = strtok(copy, ",");
+			tempFileName = strtok(NULL, ",");
 			ipAddress = strtok(NULL, ",");
 			while(tempFileName != NULL)
 			{
@@ -291,12 +291,12 @@ bool Node::delFile(int fileID, char * fileName, char * message)
 			}
 			status = "was deleted.\n";
 		}
-		
+		delete copy;	
 		postLock(strtokLock);
-	}	
-	if(status = NULL)
+	}
+	if(status == NULL)
 		status = "could not be found.\n";
-		
+	strcat(message, ",");	
 	strcat(message, status);
 	findID(0, message);
 	return true;		
@@ -334,8 +334,9 @@ void Node::getTable(char * message)
 }
 void Node::quit(char * msg)
 {
-    instanceof = DEAD;
     s_send(fingerTable[0]->socket,msg);
+    sleep(1);
+    instanceof = DEAD;
 }
 
 void Node::getFileInfo(int fileID, char * fileName, char * message)
@@ -427,7 +428,7 @@ void Node::handle(char * buf)
 	    {
 	    	quit(buf);
 	    }
-	    else if(strcmp(instruction, "getFile") == 0)
+	    else if(strcmp(instruction, "findFile") == 0)
 	    {
 	    	getFileInfo(fileID, fileName, buf);
 	    }
@@ -500,37 +501,3 @@ void * spawnNewReciever(void * information)
 	return NULL;
 }
 
-
-//stuff to be added to updateTable or addNodeFinal etc
-    //TODO:This needs to happen in a different function (updateTable or something)
-    /*//make nessacary adjustments in this finger table
-    for(int i = 0; i < m; i++)
-    {
-        if(fingerTable[i]->nodeID > nodeID && 
-        nodeID >= ((this->nodeID + 1<<i) % (1<<m)))
-        {
-            delete fingerTable[i];
-            finger * f = new finger();
-            f->nodeID = nodeID;
-            f->socket = new_socket();
-            connect(f->socket,portNumber);       
-            fingerTable[i] = f;
-        }
-    }*/
-    
-    //build temp finger table
-
-
-//old logic - probably works, safekeeping
-    ////alter temp finger table based on this->nodeID
-    //int thisNodeID = this->nodeID;
-    //if(this->nodeID < nodeID)
-    //    thisNodeID += 1<<m; 
-    //for(int i = 0; i < m; i++)
-    //{
-        //DEBUGPRINT printf("%d,%d\n",thisNodeID, nodeID+(1<<i));
-        //if(thisNodeID >= nodeID + (1<<i) && thisNodeID > newNodeFT[i]->nodeID)
-        //{    
-        //    newNodeFT[i]->nodeID = thisNodeID;
-        //    newNodeFT[i]->socket = this->portNumber;
-        //}
